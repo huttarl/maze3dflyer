@@ -15,6 +15,7 @@ glCamera::glCamera()
 {
 	// Initalize all our member varibles.
 	m_MaxPitchRate			= 0.0f;
+	m_MaxPitch				= 0.0f;
 	m_MaxHeadingRate		= 0.0f;
 	m_HeadingDegrees		= 0.0f;
 	m_PitchDegrees			= 0.0f;
@@ -111,6 +112,11 @@ void glCamera::ChangePitch(GLfloat degrees)
 		}
 	}
 
+	// keep within limits
+	if (m_PitchDegrees > m_MaxPitch) m_PitchDegrees = m_MaxPitch;
+	else if (m_PitchDegrees < -m_MaxPitch) m_PitchDegrees = -m_MaxPitch;
+
+	// This may not be possible.
 	// We don't want our pitch to run away from us. Although it
 	// really doesn't matter I prefer to have my pitch degrees
 	// within the range of -360.0f to 360.0f
@@ -233,4 +239,25 @@ void glCamera::MoveSideways(GLfloat distance)
 {
 	m_SidewaysVelocity = 0.0f;
 	AccelSideways(distance);
+}
+
+void glCamera::SnapToGrid()
+{
+	debugMsg("snap to grid: %f %f %f  / %f %f becomes ", m_Position.x, m_Position.y, m_Position.z, m_HeadingDegrees, m_PitchDegrees);
+	// should probably use floor()
+	m_Position.x = ((int)m_Position.x - (m_Position.x < 0 ? 1.0f : 0.0f)) + 0.5f;
+	m_Position.y = ((int)m_Position.y - (m_Position.y < 0 ? 1.0f : 0.0f)) + 0.5f;
+	m_Position.z = ((int)m_Position.z - (m_Position.z < 0 ? 1.0f : 0.0f)) + 0.5f;
+	m_HeadingDegrees = ((int)((m_HeadingDegrees + ((m_HeadingDegrees < 0) ? -45.0f : 45.0f)) / 90.0f)) * 90.0f;
+	m_PitchDegrees = ((int)((m_PitchDegrees + ((m_PitchDegrees < 0) ? -45.0f : 45.0f)) / 90.0f)) * 90.0f;
+	debugMsg(" %f %f %f  / %f %f\n", m_Position.x, m_Position.y, m_Position.z, m_HeadingDegrees, m_PitchDegrees);
+}
+
+void glCamera::GoTo(GLfloat nx, GLfloat ny, GLfloat nz, GLfloat npitch, GLfloat nheading)
+{
+	m_Position.x = nx;
+	m_Position.y = ny;
+	m_Position.z = nz; // -nz?
+	m_PitchDegrees = npitch; 
+	m_HeadingDegrees= nheading;	
 }
