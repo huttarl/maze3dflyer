@@ -22,6 +22,7 @@ class glCamera
 {
 public:
 	GLfloat m_MaxPitchRate;
+	GLfloat m_MaxPitch;
 	GLfloat m_MaxHeadingRate;
 	GLfloat m_HeadingDegrees;
 	GLfloat m_PitchDegrees;
@@ -41,6 +42,8 @@ public:
 	void ChangeHeading(GLfloat degrees);
 	void ChangePitch(GLfloat degrees);
 	void SetPerspective(void);
+	void glCamera::SnapToGrid(void);
+	void glCamera::GoTo(GLfloat nx, GLfloat ny, GLfloat nz, GLfloat npitch, GLfloat nheading);
 	glCamera();
 	virtual ~glCamera();
 

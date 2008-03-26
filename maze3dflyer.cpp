@@ -79,7 +79,7 @@ bool CheckKeys(void);
 const float piover180 = 0.0174532925f;
 static int xRes = 800;
 static int yRes = 600;
-static char title[] = "Random 3D Maze";
+static char title[] = "3D Maze Flyer";
 
 GLfloat xheading = 0.0f, yheading = 0.0f;
 GLfloat xpos = 0.5f, ypos = 0.5f, zpos = 10.0f;
@@ -395,14 +395,45 @@ public:
 		Wall *w;
 		// Should maybe vary this order?
 		w = tryOpenWall(-1, 0, 0); if (w) return w;
+		w = tryOpenWall(0, 0, -1); if (w) return w;
+		w = tryOpenWall(0, 0,  1); if (w) return w;
 		w = tryOpenWall( 1, 0, 0); if (w) return w;
 		w = tryOpenWall(0, -1, 0); if (w) return w;
 		w = tryOpenWall(0,  1, 0); if (w) return w;
-		w = tryOpenWall(0, 0, -1); if (w) return w;
-		w = tryOpenWall(0, 0,  1); if (w) return w;
 
 		errorMsg("Entrance or exit %d,%d,%d has no closed walls to open.\n", x, y, z);
 		return (Wall *)NULL;
+	}
+
+	/* Set the camera on the other side of wall w from this cc, facing this cc. */
+	void standOutside(Wall *w) {
+		GLfloat cx = (x + 0.5f) * cellSize, cy = (y + 0.5f) * cellSize, cz = (z + 0.5f) * cellSize;
+		GLfloat heading = 0.0f, pitch = 0.0f;
+		Vertex *qv = w->quad.vertices;
+
+		debugMsg("standOutside: cc(%d, %d, %d), w(%2.2f,%2.2f,%2.2f / %2.2f,%2.2f,%2.2f): ",
+			x, y, z, qv[0].x, qv[0].y, qv[0].z, qv[2].x, qv[2].y, qv[2].z);
+		if (qv[0].x == qv[2].x) { // If wall is in X plane
+			debugMsg("x plane;\n");
+			heading = qv[0].x > cx ? -90.0f : 90.0f;
+			// pitch = 0;
+			cx += (qv[0].x - cx) * 2;
+		} else if (qv[0].y == qv[2].y) { // If wall is in Y plane
+			debugMsg("y plane;\n");
+			pitch = qv[0].y > cy ? Cam.m_MaxPitch : -Cam.m_MaxPitch;
+			// heading = 0;
+			cy += (qv[0].y - cy) * 2;
+		} else if (qv[0].z == qv[2].z) { // If wall is in z plane
+			debugMsg("z plane;\n");
+			heading = qv[0].z > cz ? 0.0f : 180.0f;
+			// pitch = 0;
+			cz += (qv[0].z - cz) * 2;
+		}
+
+		debugMsg("  GoTo(%2.2f,%2.2f,%2.2f, p %2.2f, h %2.2f)\n",
+			cx, cy, cz, pitch, heading);
+		Cam.GoTo(cx, cy, -cz, pitch, heading);
+		Cam.AccelForward(-keyAccelRate*2);
 	}
 
 	/* Get state of wall between this and nc.
@@ -725,6 +756,7 @@ void SetupWorld()
 	Cam.m_MaxVelocity = wallMargin * 1.0f;
 	Cam.m_MaxAccel = Cam.m_MaxVelocity * 0.5f;
 	Cam.m_MaxPitchRate = 5.0f;
+	Cam.m_MaxPitch = 89.9f;
 	Cam.m_MaxHeadingRate = 5.0f;
 	Cam.m_PitchDegrees = 0.0f;
 	Cam.m_HeadingDegrees = 0.0f;
@@ -1411,24 +1443,23 @@ bool CheckKeys(void) {
 	if(keysDown['D'] || keysDown['E']) Cam.AccelSideways(keyAccelRate);
 
 	// reset position / heading / pitch to the beginning of the maze.
-	if (keysDown[VK_HOME]) {
-		Cam.m_Position.x = -2.0f;
-		Cam.m_Position.y = 0.5f;
-		Cam.m_Position.z = -0.5f;
-		Cam.m_HeadingDegrees = 90.0f;
-		Cam.m_PitchDegrees = 0.0f;
+	if (keysDown[VK_HOME] && !keysStillDown[VK_HOME]) {
+		keysStillDown[VK_HOME]=TRUE;
+		ccEntrance.standOutside(entranceWall);
+	}
+	else if (!keysDown[VK_HOME])
+	{
+		keysStillDown[VK_HOME]=FALSE;
 	}
 
 	// snap to grid
-	if (keysDown[VK_SPACE]) {
-		debugMsg("snap to: %f %f %f  / %f %f becomes ", Cam.m_Position.x, Cam.m_Position.y, Cam.m_Position.z, Cam.m_HeadingDegrees, Cam.m_PitchDegrees);
-		// should probably use floor()
-		Cam.m_Position.x = ((int)Cam.m_Position.x - (Cam.m_Position.x < 0 ? 1.0f : 0.0f)) + 0.5f;
-		Cam.m_Position.y = ((int)Cam.m_Position.y - (Cam.m_Position.y < 0 ? 1.0f : 0.0f)) + 0.5f;
-		Cam.m_Position.z = ((int)Cam.m_Position.z - (Cam.m_Position.z < 0 ? 1.0f : 0.0f)) + 0.5f;
-		Cam.m_HeadingDegrees = ((int)((Cam.m_HeadingDegrees + ((Cam.m_HeadingDegrees < 0) ? -45.0f : 45.0f)) / 90.0f)) * 90.0f;
-		Cam.m_PitchDegrees = ((int)((Cam.m_PitchDegrees + ((Cam.m_PitchDegrees < 0) ? -45.0f : 45.0f)) / 90.0f)) * 90.0f;
-		debugMsg(" %f %f %f  / %f %f\n", Cam.m_Position.x, Cam.m_Position.y, Cam.m_Position.z, Cam.m_HeadingDegrees, Cam.m_PitchDegrees);
+	if (keysDown[VK_SPACE] && !keysStillDown[VK_SPACE]) {
+		keysStillDown[VK_SPACE]=TRUE;
+		Cam.SnapToGrid();
+	}
+	else if (!keysDown[VK_SPACE])
+	{
+		keysStillDown[VK_SPACE]=FALSE;
 	}
 
 	if (keysDown['B'] && !keysStillDown['B'])

@@ -1,20 +1,20 @@
  * To do:
  *- release! use google code project hosting? what license? Artistic
    svn URL: https://maze3dflyer.googlecode.com/svn/trunk
-   #- eliminate unnecessary files
-   *- structure?
-   *- move code to maze3dflyer and commit.
+   #x eliminate unnecessary files
+   *x structure?
+   *x move code to maze3dflyer and commit.
    *- notify nehedev@gmail.com - they indicated a desire to post it on nehe.
  - clean up code, including "borrowed" code
    - maybe factor some out, e.g. maze gen, display, each class into a .h
-   ##- make sure all code is properly attributed.
+   ##x make sure all code is properly attributed.
      Should be limited to those at the top of Maze3DSSaver.cpp
    - I'm not really using jpeg.cpp / jpeg.h, except that jpeg.h has #pragma comment(lib, "lib/jpeg.lib")
      lib/jpeg.lib seems to be used only for LoadBMP(). I should either
       - factor out LoadBMP (I believe the code is available on Nehe?) and get rid of jpeg.{cpp,h,lib}, or
       *- actually use jpeg.lib and have jpg textures instead of BMP. jgp textures would be under 1/10th the size of BMP!
  - port to Linux
- - fix ico/bmp: it doesn't make sense (walls / empty areas don't line up)
+ x fix ico/bmp: it doesn't make sense (walls / empty areas don't line up)
  - nicer display:
    - antialiasing 
      - hard? polygon AA requires depth sorting. Or does it? The main jaggies are polygon-against-background.
@@ -29,7 +29,7 @@
 	 - see http://glprogramming.com/red/chapter06.html
    - fog
    - lighting (shadow) (lightmapping?)
-   -q* skybox / sky sphere (http://gpwiki.org/index.php/Sky_Box, http://www.mindcontrol.org/~hplus/graphics/skybox.html,
+   -* skybox / sky sphere (http://gpwiki.org/index.php/Sky_Box, http://www.mindcontrol.org/~hplus/graphics/skybox.html,
 	   http://www.morrowland.com/apron/tutorials/gl/gl_skybox.zip
 	   - allow switching skybox: e.g. use day/clouds, night/stars, mountains/lake, etc.
 	   - can we use scenery from Stellarium? Stellarium "old-style" landscapes have a ground image and multiple side images; no top.
@@ -48,7 +48,7 @@
    xq have entrance/exit discs rotate with system time
      xq and be textureless
  x* A consequence of the whole sparsity thing is having to place the entrance and exit more intelligently.
- -* update documentation for keys
+ xq# update documentation for keys
  - port to Linux (http://csf11.acs.uwosh.edu/cs371/visualstudio/)
  x add 'c' to toggle collision checking
  - performance:
@@ -75,20 +75,21 @@
    - enhancement: PgUp / PgDn for strafe up/down (maybe not needed)
    x see http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=Quaternion_Camera_Class for the math
      - maybe add my sideways-motion feature to their lesson sample as an enhancement
+     x implement maxPitch
    - in addition to the continuous controls we have now, it would be nice to
      have discrete ones:
 	 - move fwd/bwd/sideways one cell
 	 - rotate 90 degrees
-	 - go to maze entrance (Home)
-	   - used to work; adjust for new entrance location
+	 x go to maze entrance (Home)
+	   xq used to work; adjust for new entrance location
 	 x snap to maze grid (position and orientation)
 	   - animate by steps, not just snap
-   - do movement with smooth acceleration
    - smooth turning accel/decel
-   - forward accel/decel
-     x we have a little of this now.
-     - don't decel/accel between consecutive forward autopilot moves
+   x forward accel/decel
+     x we have some of this now.
    * autopilot, following maze
+     - requires solver
+     - don't decel/accel between consecutive forward autopilot moves
      - enhancement: back out of short dead-ends, instead of doing 180
    x maybe try ArcBall rotation with mouse?: http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=48
 	 x no... right now we're using the quaternion class's mouse control, which is good
