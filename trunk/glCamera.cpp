@@ -2,10 +2,11 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include <stdio.h> // temp for dbg
+// #include <stdio.h> // temp for dbg
+
+#include "maze3dflyer.h"
 #include "glCamera.h"
 
-extern void debugMsg(const char *str, ...);
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -50,7 +51,7 @@ void glCamera::SetPerspective()
 	q = m_qPitch * m_qHeading;
 	q.CreateMatrix(Matrix);
 
-	// Let OpenGL set our new prespective on the world!
+	// Let OpenGL set our new perspective on the world!
 	glMultMatrixf(Matrix);
 	
 	// Create a matrix from the pitch Quaternion and get the j vector 
@@ -84,7 +85,7 @@ void glCamera::SetPerspective()
 	// Translate to our new position.
 	glTranslatef(-m_Position.x, -m_Position.y, m_Position.z);
 
-	glPrint("<%0.2f %0.2f %0.2f>", m_Position.x, m_Position.y, -m_Position.z);
+	// glPrint("<%0.2f %0.2f %0.2f>", m_Position.x, m_Position.y, -m_Position.z);
 }
 
 void glCamera::ChangePitch(GLfloat degrees)
