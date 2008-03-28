@@ -10,9 +10,6 @@
  *		http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=Quaternion_Camera_Class
  *		JPG loading code (may not be used) by Ronny André Reierstad from APRON tutorials at
  *			http://www.morrowland.com/apron/tut_gl.php
- *
- *		See also http://www.rednebula.com/index.php?page=3dmaze for another 3D maze generation/
- *		display/navigation program (this one is not related to it).
  */
 
 /*
@@ -22,64 +19,51 @@
  * as cells that are not part of the navigable maze can now exist.
  */
 
-#include <stdlib.h> // In Windows, stdlib.h must come before glut.h
 #include <windows.h>
 #include <math.h>
 #include <stdio.h>
-#include <cstdlib> // FIXME: is this portable?
-// #include <time.h>
-#include <ctime> // FIXME: is this portable?
-#include <new> // FIXME: is this portable?
+#include <cstdlib>
+#include <ctime>
+#include <new>
 #include <assert.h>
 
 #include <gl/gl.h>			// OpenGL header files
 #include <gl/glu.h>			// 
+// #include <gl/glaux.h>	// unneeded, apparently
 #include <gl/glut.h>		// (glut.h actually includes gl and glu.h, so we're redundant)
 
-#include "maze3dflyer.h"
-#include "Wall.h"
-#include "Maze3D.h"
-#include "CellCoord.h"
 #include "glCamera.h"
-
-void setAutopilot(bool newAP);
-void runAutopilot();
-
-// Maze::collide?
-/* Return true iff moving from point p along vector v would collide with a wall. */
-bool collide(glPoint &p, glVector &v);
-
-void CheckMouse(void);
-bool CheckKeys(void);
-
 
 glCamera Cam;				// Our Camera for moving around and setting prespective
 							// on things.
 
 #define DEBUGGING 1
+//#ifdef DEBUGGING
+//#define USE_FONTS 1
+//#endif
 
 HDC			hDC=NULL;		// Private GDI Device Context
 HGLRC		hRC=NULL;		// Permanent Rendering Context
 HWND		hWnd=NULL;		// Holds Our Window Handle
 HINSTANCE	hInstance;		// Holds The Instance Of The Application
 
-GLuint	helpDLInner, helpDLOuter, fpsDLInner, fpsDLOuter; // display list ID's
-
-const float piover180 = 0.0174532925f;
-int xRes = 1024;
-int yRes = 768;
-char title[] = "3D Maze Flyer";
+#ifdef USE_FONTS
+GLuint	base;				// Base Display List For The Font Set
+#endif
 
 bool	keysDown[256];		// keys for which we have received down events (and no release)
 bool	keysStillDown[256];	// keys for which we have already processed inital down events (and no release)
-							// keysStillDown[] is the equivalent of what used to be mp, bp, etc.
 bool	active=TRUE;		// Window Active Flag Set To TRUE By Default
 bool	fullscreen=TRUE;	// Fullscreen Flag Set To Fullscreen Mode By Default
 bool	blend=FALSE;		// Blending ON/OFF
 bool	autopilot=TRUE;		// Autopilot on?
 bool	mouseGrab=FALSE;		// mouse centering is on?
-bool	showFPS=FALSE;		// whether to display frames-per-second stat
-bool	showHelp=TRUE;		// show help text
+bool	aaPolys = FALSE;	// antialias polygons?
+//bool	bp=FALSE;			// B pressed and not yet released?
+//bool	fp=FALSE;			// F pressed and not yet released?
+//bool	pp=FALSE;			// P Pressed and not yet released?
+//bool	mp=FALSE;			// M pressed and not yet released?
+//bool	cp=FALSE;			// C pressed and not yet released?
 
 float	keyTurnRate = 2.0f; // how fast to turn in response to keys
 float	keyAccelRate = 0.1f; // how fast to accelerate in response to keys
@@ -89,44 +73,62 @@ float	keyMoveRate = 0.1f;  // how fast to move in response to keys
 UINT	MouseX, MouseY;		// Coordinates for the mouse
 UINT	CenterX, CenterY;	// Coordinates for the center of the screen.
 
-Maze3D maze;
+void CheckMouse(void);
+bool CheckKeys(void);
 
-// distance from eye to near clipping plane. Should be about wallMargin/2.
-const float zNear = (Maze3D::wallMargin * 0.6f);
-// distance from eye to far clipping plane.
-const float zFar = (Maze3D::cellSize * 100.0f);
-
+const float piover180 = 0.0174532925f;
+static int xRes = 800;
+static int yRes = 600;
+static char title[] = "3D Maze Flyer";
 
 GLfloat xheading = 0.0f, yheading = 0.0f;
 GLfloat xpos = 0.5f, ypos = 0.5f, zpos = 10.0f;
 GLUquadricObj *quadric;	
 
-const numFilters = 3;		// How many filters for each texture
-GLuint filter = 2;				// Which Filter To Use
+const numFilters = 3;		// How many filters
+GLuint	filter;				// Which Filter To Use
 typedef enum { brick, carpet, wood, popcorn } Material;
 const numTextures = (popcorn - brick + 1);		// Max # textures (not counting filtering)
 GLuint	textures[numFilters * numTextures];		// Storage for 4 texture indexes, with 3 filters each.
 
-//FIXME: read this from a text file at runtime?
-static char helpText[] = "Controls:\n\
-\n\
-Esc: exit\n\
-?: toggle display of help text\n\
-\n\
-WASD: move\n\
-Arrow keys: turn\n\
-Mouse: steer (if mouse grab is on)\n\
-Home/End: jump to maze entrance/exit\n\
-Enter: toggle autopilot (not yet implemented)\n\
-P: show path from entrance to exit (not yet implemented)\n\
-Space: snap camera position/orientation to grid\n\
-\n\
-M or left-click: toggle mouse grab\n\
-T: toggle frames-per-second display\n\
-F: cycle texture filter mode\n\
-C: toggle collision checking (allow passing through walls or not)\n\
-F1: toggle full-screen mode";
 
+const int wMax = 20, hMax = 20, dMax = 20; // This is necessary because C++ doesn't do fully dynamic
+							// multidimensional arrays. I've been spoiled by Java.
+// The following probably belong in a Maze class.
+static int w = 7;			// width (x) of maze in cells
+static int h = 10;			// height (y) of maze in cells
+static int d = 10;			// depth (z) of maze in cells
+// sparsity: two passageway cells cannot be closer to each other than sparsity, unless
+// they are connected as directly as possible.
+static int sparsity = 3;	// how sparse the maze must be
+// branchClustering affects tendency for the maze to branch out as much as possible from any given cell.
+// The maze will branch out as much as possible up to branchClustering branches; after that, the
+// likelihood decreases. Suggested range 1-6.
+static int branchClustering = 2;
+// size of one cell in world coordinates. Some code may depend on cellSize = 1.0
+static const float cellSize = 1.0f;
+// margin around walls that we can't collide with; should be << cellSize.
+static const float wallMargin = 0.11f;
+// distance from eye to near clipping plane. Should be about wallMargin/2.
+static const float zNear = (wallMargin * 0.6f);
+// distance from eye to far clipping plane.
+static const float zFar = (cellSize * 100.0f);
+static bool checkCollisions = true;
+
+// Maze::collide?
+/* Return true iff moving from point p along vector v would collide with a wall. */
+extern bool collide(glPoint &p, glVector &v);
+
+typedef struct tagVERTEX
+{
+	float x, y, z;
+	float u, v;
+} Vertex;
+
+typedef struct tagQUAD
+{
+	Vertex vertices[4];
+} Quad;
 
 void debugMsg(const char *str, ...)
 {
@@ -159,6 +161,343 @@ static int nc=0; // Cell
 static int nw=0; // Wall
 static bool firstTime = true; // for debugging
 
+static GLfloat exitRot = 0.0f;
+
+class Wall {
+public:
+	enum WallState { UNINITIALIZED, OPEN, CLOSED } state;
+	// outsidePositive: true if "outside" of face is in positive axis direction.
+	// only applies to CLOSED walls.
+	bool outsidePositive;
+	Quad quad;
+	Wall() { state = UNINITIALIZED; outsidePositive = false; }
+	// Within a glBegin/glEnd, draw a quad for this wall.
+	void draw(char dir) {
+		switch (dir) {
+			case 'x': glNormal3f(outsidePositive ? 1.0f : -1.0f, 0.0f, 0.0f); break;
+			case 'y': glNormal3f(0.0f, outsidePositive ? 1.0f : -1.0f, 0.0f); break;
+			case 'z': glNormal3f(0.0f, 0.0f, outsidePositive ? 1.0f : -1.0f); break;
+			default: errorMsg("Invalid dir in Wall::draw('%c')\n", dir);
+		}
+		Vertex *qv = quad.vertices;
+		for (int i=0; i < 4; i++) {
+			//if (firstTime) debugMsg("(%1.1f %1.1f %1.1f) ", qv[i].x, qv[i].y, qv[i].z);
+			glTexCoord2f(qv[i].u, qv[i].v); glVertex3f(qv[i].x, qv[i].y, qv[i].z);
+		}
+
+		//if (firstTime) debugMsg("\n");
+	}
+
+	// Outside a glBegin/glEnd, draw a visual marker for the exit (or entrance) at this wall.
+	void drawExit(int x, int y, int z, bool isEntrance) {
+		Vertex *qv = quad.vertices;
+		GLfloat cx = qv[0].x + cellSize * 0.5f,
+			cy = qv[0].y + cellSize * 0.5f,
+			cz = qv[0].z + cellSize * 0.5f; // center of disc
+		//if (firstTime)
+		//	debugMsg("drawExit(%d, %d, %d, %s): %f, %f, %f\n",
+		//		x, y, z, isEntrance ? "entrance" : "exit",
+		//		qv[0].x, qv[0].y, qv[0].z);
+
+		glPushMatrix();
+
+		// rotate disc from z plane to x or y plane if nec.
+		if (qv[0].x == qv[2].x) { // exit wall is in X plane
+			cx = qv[0].x;
+			glTranslatef(cx, cy, cz);
+			glRotatef(90.0f, 0.0f, 1.0f, 0.0f); // rotate disc around y axis
+		} else if (qv[0].y == qv[2].y) { // exit wall is in Y plane
+			cy = qv[0].y;
+			glTranslatef(cx, cy, cz);
+			glRotatef(90.0f, 1.0f, 0.0f, 0.0f); // rotate disc around x axis
+		} else {
+			cz = qv[0].z;
+			glTranslatef(cx, cy, cz);
+		}
+
+		// no texture
+		glBindTexture(GL_TEXTURE_2D, GL_NONE);
+		// color: red or green
+		if (isEntrance) glColor3f(0.4f, 1.0f, 0.4f);
+		else glColor3f(1.0f, 0.4f, 0.4f);
+
+		// spin polygon (disc)
+		exitRot += 1.25f;
+		glRotatef(isEntrance ? exitRot : -exitRot, 0.0f, 0.0f, 1.0f);
+
+		// gluDisk(quadric, innerRadius, outerRadius, slices, loops)
+		gluDisk(quadric, cellSize * 0.4f, cellSize * 0.5f, 5, 3);
+
+		glPopMatrix();
+	}
+};
+
+/* Main model: the maze consists of both cells and walls. Each wall may be shared by two cells. */
+/* C++ doesn't support dynamic multidimensional arrays very well, hence the following cruft. */
+// The maze's walls
+Wall (*xWalls)[hMax][dMax];    // Walls facing along X axis   [w+1][h][d]
+Wall (*yWalls)[hMax+1][dMax]; // Walls facing along Y axis   [w][h+1][d]
+Wall (*zWalls)[hMax][dMax+1];  // Walls facing along Z axis   [w][h][d+1]
+
+// Pointers to the open "walls" at entrance and exit.
+Wall *exitWall, *entranceWall;
+
+class Cell {
+public:
+	enum CellState { uninitialized, passage, forbidden } state;
+	// state = uninitialized: This cell has not been visited yet.
+	// state = passage: This cell has been carved out; it is "passageway".
+	// state = forbidden: true iff this cell is too close to others and so must be unoccupied.
+	Cell() { state = uninitialized; }
+	static inline CellState getCellState(int x, int y, int z);
+};
+Cell (*cells)[hMax][dMax];		// The maze's cells
+
+Cell::CellState Cell::getCellState(int x, int y, int z) { return cells[x][y][z].state; };
+
+class CellCoord {
+public:
+	int x, y, z;
+	CellCoord(int a=0, int b=0, int c=0) { x = a, y = b, z = c; };
+	void init(glPoint &p) {
+		x = int(floor(p.x / cellSize));
+		y = int(floor(p.y / cellSize));
+		z = int(floor(p.z / cellSize));
+	}
+	boolean operator ==(CellCoord &nc) { return (x == nc.x && y == nc.y && z == nc.z); }
+	bool isCellPassage() { return cells[x][y][z].state == Cell::passage; }
+	void setCellState(Cell::CellState v) { cells[x][y][z].state = v; }
+	inline Cell::CellState getCellState() { return cells[x][y][z].state; }
+	// distance squared (euclidean)
+	inline int dist2(int i, int j, int k) { return (x - i)*(x - i) + (y - j)*(y - j) + (z - k)*(z - k); }
+	// manhattan distance
+	inline int manhdist(CellCoord &nc) { return abs(x - nc.x) + abs(y - nc.y) + abs(z - nc.z); }
+	/* Return true iff this cell is a legal place to expand into from fromCC.
+		Assumes both are within bounds of maze grid, that they differ in only one axis and
+		by only one unit, that fromCC is already passage, and that this cell is uninitialized.
+		Checks whether this cell is too close to other passages, violating sparsity. */
+	bool isCellPassable(CellCoord *fromCC) {
+		/* Trivial case: if sparsity == 1, no check for closeness. */
+		if (sparsity <= 1) return true;
+
+		// get direction of movement
+		int dx = x - fromCC->x, dy = y - fromCC->y, dz = z - fromCC->z;
+		// compute bounding box to check: lower & upper bounds for i, j, k ####
+		int i, j, k, il, iu, jl, ju, kl, ku;
+		// radius squared
+		int sparsity2 = sparsity * sparsity;
+		il = x - sparsity + 1;
+		iu = x + sparsity - 1;
+		jl = y - sparsity + 1;
+		ju = y + sparsity - 1;
+		kl = z - sparsity + 1;
+		ku = z + sparsity - 1;
+		if (dx > 0) il = x;
+		else if (dx < 0) iu = x;
+		else if (dy > 0) jl = y;
+		else if (dy < 0) ju = y;
+		else if (dz > 0) kl = z;
+		else /* dz < 0 */ ku = z;
+
+		//debugMsg("isCellPassable(): %d,%d,%d from %d,%d,%d; bounds: %d,%d,%d to %d,%d,%d\n",
+		//	x, y, z, fromCC->x, fromCC->y, fromCC->z, il,jl,kl, iu,ju,ku);
+
+		// trim bbox to maze grid
+		il = max(il, 0);
+		jl = max(jl, 0);
+		kl = max(kl, 0);
+		iu = min(iu, w-1);
+		ju = min(ju, h-1);
+		ku = min(ku, d-1);
+
+		// Iterate through bbox, looking for already-occupied cells within radius.
+		// Note, even when ijk = xyz, we don't reject ourselves because the current cell is not passage.
+		for (i = il; i <= iu; i++)
+			for (j = jl; j <= ju; j++)
+				for (k = kl; k <= ku; k++)
+					if (Cell::getCellState(i, j, k) == Cell::passage &&
+						dist2(i, j, k) < sparsity2) {
+						//debugMsg("   blocked at %d,%d,%d, dist2 = %d\n", i, j, k, dist2(i, j, k));
+						return false;
+					}
+		return true;
+	}
+
+	/* Find walls[] array element of wall between this and nc.
+	 * Assumes cell coordinates of this and nc differ in only one axis and by at most one unit.
+	 * Also assumes the higher of all coord pairs is within bounds 0 <= coord <= w/h/d
+	 * (i.e. one extra on the top is ok). E.g. if coords differ in x, then the higher of x and nc->x
+	 * must be 0 <= x <= w. */
+	Wall *findWallTo(CellCoord *nc) {
+		Wall *w;
+		if (nc->x != x)	{
+			w = &(xWalls[(nc->x > x) ? nc->x : x][y][z]);
+			//debugMsg("   found xWalls[%d %d %d]\n", ((nc->x > x) ? nc->x : x), y, z);
+		}
+		else if (nc->y != y) {
+			w = &(yWalls[x][(nc->y > y) ? nc->y : y][z]);
+			//debugMsg("   found yWalls[%d %d %d]\n", x, ((nc->y > y) ? nc->y : y), z);
+		}
+		else {
+			w = &(zWalls[x][y][(nc->z > z) ? nc->z : z]);
+			//debugMsg("   found zWalls[%d %d %d]\n", x, y, ((nc->z > z) ? nc->z : z));
+		}
+		return w;
+	}
+	/* Set wall between this and nc to given state.
+	 * See assumptions of findWallTo().
+	 * Also assumes this is "inside" and nc is "outside", if it matters
+	 (this assumption can be incorrect if sparseness <= 1). */
+	void setStateOfWallTo(CellCoord *nc, Wall::WallState state) {
+		Wall *w = findWallTo(nc);
+		w->state = state;
+		if (state == Wall::CLOSED) {
+			w->outsidePositive = (nc->x - x + nc->y - y + nc->z - z > 0);
+			//debugMsg("  %d %d %d.setWallTo(%d %d %d, %d): op=%c\n", x, y, z, nc->x, nc->y, nc->z,
+			//	state, w->outsidePositive ? 'y' : 'n');
+		}
+	}
+	/* Set wall of this cell in direction dx,dy,dz to given state.
+	 * See assumptions of findWallTo().
+	 * Also assumes this is "inside" and cell in dx,dy,dz is "outside", if it matters
+	 (this assumption can be incorrect if sparseness <= 1). */
+	void setStateOfWallTo(int dx, int dy, int dz, Wall::WallState state) {
+		static CellCoord nc;
+		nc.x = x+dx; nc.y = y+dy; nc.z = z+dz;
+		//nc.x += dx; nc.y += dy; nc.z += dz;
+		Wall *w = findWallTo(&nc);
+		w->state = state;
+		if (state == Wall::CLOSED) {
+			w->outsidePositive = (dx + dy + dz > 0);
+			//debugMsg("  %d %d %d.setWallTo(%d %d %d, %d): op=%c\n", x, y, z, nc.x, nc.y, nc.z,
+			//	state, w->outsidePositive ? 'y' : 'n');
+		}
+	}
+	// If the wall in direction dx,dy,dz is closed, open it and return wall.
+	// Else return null.
+	inline Wall *tryOpenWall(int dx, int dy, int dz) {
+		static CellCoord nc;
+		nc.x = x+dx; nc.y = y+dy; nc.z = z+dz;
+		//nc.x += dx; nc.y += dy; nc.z += dz;
+		Wall *w = findWallTo(&nc);
+		
+		if (w->state == Wall::CLOSED) {
+			w->state = Wall::OPEN;
+			return w;
+		}
+		else return (Wall *)NULL;
+	}
+
+	/* Open a wall of this cell that is not already open. Prefer vertical walls. */
+	// Return chosen wall.
+	// ## To do: don't assert
+	Wall *openAWall() {
+		Wall *w;
+		// Should maybe vary this order?
+		w = tryOpenWall(-1, 0, 0); if (w) return w;
+		w = tryOpenWall(0, 0, -1); if (w) return w;
+		w = tryOpenWall(0, 0,  1); if (w) return w;
+		w = tryOpenWall( 1, 0, 0); if (w) return w;
+		w = tryOpenWall(0, -1, 0); if (w) return w;
+		w = tryOpenWall(0,  1, 0); if (w) return w;
+
+		errorMsg("Entrance or exit %d,%d,%d has no closed walls to open.\n", x, y, z);
+		return (Wall *)NULL;
+	}
+
+	/* Set the camera on the other side of wall w from this cc, facing this cc. */
+	void standOutside(Wall *w) {
+		GLfloat cx = (x + 0.5f) * cellSize, cy = (y + 0.5f) * cellSize, cz = (z + 0.5f) * cellSize;
+		GLfloat heading = 0.0f, pitch = 0.0f;
+		Vertex *qv = w->quad.vertices;
+
+		debugMsg("standOutside: cc(%d, %d, %d), w(%2.2f,%2.2f,%2.2f / %2.2f,%2.2f,%2.2f): ",
+			x, y, z, qv[0].x, qv[0].y, qv[0].z, qv[2].x, qv[2].y, qv[2].z);
+		if (qv[0].x == qv[2].x) { // If wall is in X plane
+			debugMsg("x plane;\n");
+			heading = qv[0].x > cx ? -90.0f : 90.0f;
+			// pitch = 0;
+			cx += (qv[0].x - cx) * 2;
+		} else if (qv[0].y == qv[2].y) { // If wall is in Y plane
+			debugMsg("y plane;\n");
+			pitch = qv[0].y > cy ? Cam.m_MaxPitch : -Cam.m_MaxPitch;
+			// heading = 0;
+			cy += (qv[0].y - cy) * 2;
+		} else if (qv[0].z == qv[2].z) { // If wall is in z plane
+			debugMsg("z plane;\n");
+			heading = qv[0].z > cz ? 0.0f : 180.0f;
+			// pitch = 0;
+			cz += (qv[0].z - cz) * 2;
+		}
+
+		debugMsg("  GoTo(%2.2f,%2.2f,%2.2f, p %2.2f, h %2.2f)\n",
+			cx, cy, cz, pitch, heading);
+		Cam.GoTo(cx, cy, -cz, pitch, heading);
+		Cam.AccelForward(-keyAccelRate*2);
+	}
+
+	/* Get state of wall between this and nc.
+	 * See assumptions of findWallTo(). */
+	Wall::WallState getStateOfWallTo(CellCoord *nc) {
+		Wall *w = findWallTo(nc);
+		return w->state;
+	}
+	/* Get wall of this cell in direction dx,dy,dz.
+	 * See assumptions of findWallTo(). */
+	Wall::WallState getStateOfWallTo(int dx, int dy, int dz) {
+		static CellCoord nc;
+		nc.x = x+dx; nc.y = y+dy; nc.z = z+dz;
+		return getStateOfWallTo(&nc);
+	}
+	/* Get state of wall between this and nc.
+	 * Checks boundaries: does not assume coords are in range. */
+	Wall::WallState getStateOfWallToSafe(CellCoord *nc) {
+		//debugMsg(" gSOWTS(%d, %d, %d) ", nc->x, nc->y, nc->z);
+		// Is this right?
+		if ((x >= w && nc->x >= w) ||
+			(y >= h && nc->y >= h) ||
+			(z >= d && nc->z >= d) ||
+			(x < 0 && nc->x < 0) ||
+			(y < 0 && nc->y < 0) ||
+			(z < 0 && nc->z < 0))
+		{ // debugMsg(" ob1 ");
+		return Wall::OPEN; }
+		if (x > w || nc->x > w ||
+			y > h || nc->y > h ||
+			z > d || nc->z > d ||
+			x < -1 || nc->x < -1 ||
+			y < -1 || nc->y < -1 ||
+			z < -1 || nc->z < -1)
+		{ // debugMsg(" ob2 ");
+		return Wall::OPEN; }
+
+		Wall *w = findWallTo(nc);
+		//debugMsg(" wstate: %d ", w->state);
+		return w->state;
+	}
+
+	// Convenience function for Wall::drawExit()
+	inline void drawExit(Wall *w, bool isEntrance) {
+		w->drawExit(x, y, z, isEntrance);
+	}
+
+	/* Randomly shuffle the order of CellCoords in an array.
+	 * Ref: http://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm */
+	static void shuffleCCs(CellCoord *ccs, int n) {
+		CellCoord tmp;
+		int k;
+		for (; n >= 2; n--) {
+			k = rand() % n;
+			if (k != n-1) {
+				tmp = ccs[k];
+				ccs[k] = ccs[n-1];
+				ccs[n-1] = tmp;
+			}
+		}
+	}
+};
+
+CellCoord ccExit, ccEntrance;
 
 LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);	// Declaration For WndProc
 
@@ -169,16 +508,16 @@ LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);	// Declaration For WndProc
 // within distance k of each other unless they are connected as directly as possible.
 void generateMaze()
 {
-	CellCoord *queue = new CellCoord[maze.w*maze.h*maze.d], *currCell, temp, neighbors[6];
+	CellCoord *queue = new CellCoord[w*h*d], *currCell, temp, neighbors[6];
 	int queueSize = 0, addedNeighbors = 0, eemhdist = 0, ncmhdist = 0;
 
 	srand((int)time(0));
 	// pick a random starting cell and put it in the queue
-	queue[0].x = rand() % maze.w;
-	queue[0].y = rand() % maze.h;
-	queue[0].z = rand() % maze.d;
+	queue[0].x = rand() % w;
+	queue[0].y = rand() % h;
+	queue[0].z = rand() % d;
 	queue[0].setCellState(Cell::passage);
-	maze.ccEntrance = maze.ccExit = queue[0];
+	ccEntrance = ccExit = queue[0];
 	queueSize++;
 
 	do {
@@ -188,22 +527,22 @@ void generateMaze()
 
 		// Should this be the new entrance or exit?
 		// if currCell is further from entrance than exit is, set exit to currCell
-		ncmhdist = currCell->manhdist(maze.ccEntrance);
+		ncmhdist = currCell->manhdist(ccEntrance);
 		if (ncmhdist > eemhdist) {
 			//debugMsg("Replaced exit %d,%d,%d with %d,%d,%d: %d from entrance %d,%d,%d\n",
 			//	ccExit.x,ccExit.y,ccExit.z, currCell->x,currCell->y,currCell->z,
 			//	ncmhdist, ccEntrance.x,ccEntrance.y,ccEntrance.z);
-			maze.ccExit = *currCell;
+			ccExit = *currCell;
 			eemhdist = ncmhdist;
 		}
 		// if currCell is further from exit than entrance is, set entrance to currCell
 		else {
-			ncmhdist = currCell->manhdist(maze.ccExit);
+			ncmhdist = currCell->manhdist(ccExit);
 			if (ncmhdist > eemhdist) {
 				//debugMsg("Replaced entrance %d,%d,%d with %d,%d,%d: %d from exit %d,%d,%d\n",
 				//	ccEntrance.x,ccEntrance.y,ccEntrance.z, currCell->x,currCell->y,currCell->z,
 				//	ncmhdist, ccExit.x,ccExit.y,ccExit.z);
-				maze.ccEntrance = *currCell;
+				ccEntrance = *currCell;
 				eemhdist = ncmhdist;
 			}
 		}
@@ -212,15 +551,15 @@ void generateMaze()
 		int nn = 0; // num of neighbors
 		if (currCell->x > 0)     { neighbors[nn] = *currCell; neighbors[nn++].x--; }
 		else currCell->setStateOfWallTo(-1, 0, 0, Wall::CLOSED);
-		if (currCell->x < maze.w - 1) { neighbors[nn] = *currCell; neighbors[nn++].x++; }
+		if (currCell->x < w - 1) { neighbors[nn] = *currCell; neighbors[nn++].x++; }
 		else currCell->setStateOfWallTo( 1, 0, 0, Wall::CLOSED);
 		if (currCell->y > 0)     { neighbors[nn] = *currCell; neighbors[nn++].y--; }
 		else currCell->setStateOfWallTo(0, -1, 0, Wall::CLOSED);
-		if (currCell->y < maze.h - 1) { neighbors[nn] = *currCell; neighbors[nn++].y++; }
+		if (currCell->y < h - 1) { neighbors[nn] = *currCell; neighbors[nn++].y++; }
 		else currCell->setStateOfWallTo(0,  1, 0, Wall::CLOSED);
 		if (currCell->z > 0)     { neighbors[nn] = *currCell; neighbors[nn++].z--; }
 		else currCell->setStateOfWallTo(0, 0, -1, Wall::CLOSED);
-		if (currCell->z < maze.d - 1) { neighbors[nn] = *currCell; neighbors[nn++].z++; }
+		if (currCell->z < d - 1) { neighbors[nn] = *currCell; neighbors[nn++].z++; }
 		else currCell->setStateOfWallTo(0, 0,  1, Wall::CLOSED);
 		//debugMsg("%d neighbors.\n", nn);
 		// maybe shuffle order of neighbors, to avoid predictable maze shapes.
@@ -245,7 +584,7 @@ void generateMaze()
 				case Cell::uninitialized:
 					// We have the potential for expansion into this neighbor.
 					// Tend to not expand into too many neighbors from one cell (limit branch clustering).
-					if (rand() % (addedNeighbors + 1) > maze.branchClustering) {
+					if (rand() % (addedNeighbors + 1) > branchClustering) {
 						// don't expand into neighbor, but don't mark it forbidden either.
 						currCell->setStateOfWallTo(ni, Wall::CLOSED);
 						break;
@@ -287,8 +626,8 @@ void generateMaze()
 	} while (queueSize > 0);
 
 	// Add an entrance and exit.
-	maze.entranceWall = maze.ccEntrance.openAWall();
-	maze.exitWall = maze.ccExit.openAWall();
+	entranceWall = ccEntrance.openAWall();
+	exitWall = ccExit.openAWall();
 
 	// Old method, works only for a filled maze (sparsity <= 1):
 	//// We could place these anywhere, but putting them on opposite corners minimizes
@@ -299,7 +638,7 @@ void generateMaze()
 	delete [] queue;
 }
 
-#define d(x) (0) // ((maze.zWalls[0][0][0].state == 0) ? debugMsg(" [z0 @ %d] ", (x)) : 0)
+#define d(x) (0) // ((zWalls[0][0][0].state == 0) ? debugMsg(" [z0 @ %d] ", (x)) : 0)
 
 void SetupWorld()
 {
@@ -307,128 +646,123 @@ void SetupWorld()
 	Vertex *pVertex;
 	int i, j, k;
 
-	maze.exitRot = 0.0f;
+	exitRot = 0.0f;
 
 	// allocate wall arrays
-	maze.xWalls = new Wall[maze.w+1][Maze3D::hMax][Maze3D::dMax];
-	maze.yWalls = new Wall[maze.w][Maze3D::hMax+1][Maze3D::dMax];
-	maze.zWalls = new Wall[maze.w][Maze3D::hMax][Maze3D::dMax+1];
+	xWalls = new Wall[w+1][hMax][dMax];
+	yWalls = new Wall[w][hMax+1][dMax];
+	zWalls = new Wall[w][hMax][dMax+1];
 
 	// allocate cell arrays
-	maze.cells = new Cell[maze.w][Maze3D::hMax][Maze3D::dMax];
+	cells = new Cell[w][hMax][dMax];
 
 	// set up vertices and states of xWalls, yWalls, zWalls
-	for (i=0; i <= maze.w; i++)
-		for (j=0; j <= maze.h; j++)
-			for (k=0; k <= maze.d; k++) {
-				if (i < maze.w && j < maze.h && k < maze.d) maze.cells[i][j][k].state = Cell::uninitialized;
+	for (i=0; i <= w; i++)
+		for (j=0; j <= h; j++)
+			for (k=0; k <= d; k++) {
+				if (i < w && j < h && k < d) cells[i][j][k].state = Cell::uninitialized;
 				// debugMsg("%d %d %d ", i, j, k); d(1);
-				if (j < maze.h && k < maze.d) {	// xWall:					
-					maze.xWalls[i][j][k].state = (i == 0 || i == maze.w) ? outerWallState : Wall::UNINITIALIZED;
-					// debugMsg("x: %d ", maze.xWalls[i][j][k].state); d(2);
-					pVertex = &(maze.xWalls[i][j][k].quad.vertices[0]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*k;
+				if (j < h && k < d) {	// xWall:					
+					xWalls[i][j][k].state = (i == 0 || i == w) ? outerWallState : Wall::UNINITIALIZED;
+					// debugMsg("x: %d ", xWalls[i][j][k].state); d(2);
+					pVertex = &(xWalls[i][j][k].quad.vertices[0]);
+					pVertex->x = cellSize*i;
+					pVertex->y = cellSize*j;
+					pVertex->z = cellSize*k;
 					pVertex->u = 0.0;
 					pVertex->v = 0.0;
-					pVertex = &(maze.xWalls[i][j][k].quad.vertices[1]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*(k+1);
+					pVertex = &(xWalls[i][j][k].quad.vertices[1]);
+					pVertex->x = cellSize*i;
+					pVertex->y = cellSize*j;
+					pVertex->z = cellSize*(k+1);
 					pVertex->u = 1.0;
 					pVertex->v = 0.0;
-					pVertex = &(maze.xWalls[i][j][k].quad.vertices[2]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*(j+1);
-					pVertex->z = maze.cellSize*(k+1);
+					pVertex = &(xWalls[i][j][k].quad.vertices[2]);
+					pVertex->x = cellSize*i;
+					pVertex->y = cellSize*(j+1);
+					pVertex->z = cellSize*(k+1);
 					pVertex->u = 1.0;
 					pVertex->v = 1.0;
-					pVertex = &(maze.xWalls[i][j][k].quad.vertices[3]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*(j+1);
-					pVertex->z = maze.cellSize*k;
+					pVertex = &(xWalls[i][j][k].quad.vertices[3]);
+					pVertex->x = cellSize*i;
+					pVertex->y = cellSize*(j+1);
+					pVertex->z = cellSize*k;
 					pVertex->u = 0.0;
 					pVertex->v = 1.0;
 				}
-				if (i < maze.w && k < maze.d) {	// yWall:
-					maze.yWalls[i][j][k].state = (j == 0 || j == maze.h) ? outerWallState : Wall::UNINITIALIZED;
-					// debugMsg("y: %d ", maze.yWalls[i][j][k].state); d(3);
-					pVertex = &(maze.yWalls[i][j][k].quad.vertices[0]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*k;
+				if (i < w && k < d) {	// yWall:
+					yWalls[i][j][k].state = (j == 0 || j == h) ? outerWallState : Wall::UNINITIALIZED;
+					// debugMsg("y: %d ", yWalls[i][j][k].state); d(3);
+					pVertex = &(yWalls[i][j][k].quad.vertices[0]);
+					pVertex->x = cellSize*i;
+					pVertex->y = cellSize*j;
+					pVertex->z = cellSize*k;
 					pVertex->u = 0.0;
 					pVertex->v = 0.0;
-					pVertex = &(maze.yWalls[i][j][k].quad.vertices[1]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*(k+1);
+					pVertex = &(yWalls[i][j][k].quad.vertices[1]);
+					pVertex->x = cellSize*i;
+					pVertex->y = cellSize*j;
+					pVertex->z = cellSize*(k+1);
 					pVertex->u = 1.0;
 					pVertex->v = 0.0;
-					pVertex = &(maze.yWalls[i][j][k].quad.vertices[2]);
-					pVertex->x = maze.cellSize*(i+1);
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*(k+1);
+					pVertex = &(yWalls[i][j][k].quad.vertices[2]);
+					pVertex->x = cellSize*(i+1);
+					pVertex->y = cellSize*j;
+					pVertex->z = cellSize*(k+1);
 					pVertex->u = 1.0;
 					pVertex->v = 1.0;
-					pVertex = &(maze.yWalls[i][j][k].quad.vertices[3]);
-					pVertex->x = maze.cellSize*(i+1);
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*k;
+					pVertex = &(yWalls[i][j][k].quad.vertices[3]);
+					pVertex->x = cellSize*(i+1);
+					pVertex->y = cellSize*j;
+					pVertex->z = cellSize*k;
 					pVertex->u = 0.0;
 					pVertex->v = 1.0;
 				}
-				if (i < maze.w && j < maze.h) {	// zWall:
-					maze.zWalls[i][j][k].state = (k == 0 || k == maze.d) ? outerWallState : Wall::UNINITIALIZED;
-					// debugMsg("z: %d", maze.zWalls[i][j][k].state); d(4);
-					pVertex = &(maze.zWalls[i][j][k].quad.vertices[0]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*k;
+				if (i < w && j < h) {	// zWall:
+					zWalls[i][j][k].state = (k == 0 || k == d) ? outerWallState : Wall::UNINITIALIZED;
+					// debugMsg("z: %d", zWalls[i][j][k].state); d(4);
+					pVertex = &(zWalls[i][j][k].quad.vertices[0]);
+					pVertex->x = cellSize*i;
+					pVertex->y = cellSize*j;
+					pVertex->z = cellSize*k;
 					pVertex->u = 0.0;
 					pVertex->v = 0.0;
-					pVertex = &(maze.zWalls[i][j][k].quad.vertices[1]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*(j+1);
-					pVertex->z = maze.cellSize*k;
+					pVertex = &(zWalls[i][j][k].quad.vertices[1]);
+					pVertex->x = cellSize*i;
+					pVertex->y = cellSize*(j+1);
+					pVertex->z = cellSize*k;
 					pVertex->u = 0.0;
 					pVertex->v = 1.0;
-					pVertex = &(maze.zWalls[i][j][k].quad.vertices[2]);
-					pVertex->x = maze.cellSize*(i+1);
-					pVertex->y = maze.cellSize*(j+1);
-					pVertex->z = maze.cellSize*k;
+					pVertex = &(zWalls[i][j][k].quad.vertices[2]);
+					pVertex->x = cellSize*(i+1);
+					pVertex->y = cellSize*(j+1);
+					pVertex->z = cellSize*k;
 					pVertex->u = 1.0;
 					pVertex->v = 1.0;
-					pVertex = &(maze.zWalls[i][j][k].quad.vertices[3]);
-					pVertex->x = maze.cellSize*(i+1);
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*k;
+					pVertex = &(zWalls[i][j][k].quad.vertices[3]);
+					pVertex->x = cellSize*(i+1);
+					pVertex->y = cellSize*j;
+					pVertex->z = cellSize*k;
 					pVertex->u = 1.0;
 					pVertex->v = 0.0;
 				}
 				// debugMsg("\n");
-				// debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
+				// debugMsg("zWalls[0][0][0].state = %d\n", zWalls[0][0][0].state);
 			}
 	generateMaze();
-	// debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
+	// debugMsg("zWalls[0][0][0].state = %d\n", zWalls[0][0][0].state);
 
 	// Now set up our max values for the camera
-	Cam.m_MaxVelocity = maze.wallMargin * 1.0f;
+	Cam.m_MaxVelocity = wallMargin * 1.0f;
 	Cam.m_MaxAccel = Cam.m_MaxVelocity * 0.5f;
 	Cam.m_MaxPitchRate = 5.0f;
 	Cam.m_MaxPitch = 89.9f;
 	Cam.m_MaxHeadingRate = 5.0f;
-	//Cam.m_PitchDegrees = 0.0f;
-	//Cam.m_HeadingDegrees = 0.0f;
-	Cam.m_ForwardVelocity = 0.0f;
-	Cam.m_SidewaysVelocity = 0.0f;
-	//Cam.m_Position.x = 0.0f * maze.cellSize;
-	//Cam.m_Position.y = 1.0f * maze.cellSize;
-	//Cam.m_Position.z = -15.0f * maze.cellSize;
-	maze.ccEntrance.standOutside(maze.entranceWall);
-
-	
+	Cam.m_PitchDegrees = 0.0f;
+	Cam.m_HeadingDegrees = 0.0f;
+	Cam.m_Position.x = 0.0f * cellSize;
+	Cam.m_Position.y = 1.0f * cellSize;
+	Cam.m_Position.z = -15.0f * cellSize;
 
 	memset((void *)keysDown, 0, sizeof(keysDown));
 	memset((void *)keysStillDown, 0, sizeof(keysStillDown));
@@ -505,8 +839,8 @@ int LoadGLTextures()                                    // Load Bitmaps And Conv
         int Status=FALSE;                               // Status Indicator
         // Load The Bitmap, Check For Errors, If Bitmap's Not Found Quit
 
-		Status = loadTexture(brick, "Data/brickWall_tileable.bmp") && loadTexture(carpet, "Data/carpet-6716-2x2mir.bmp")
-			&& loadTexture(wood, "Data/rocky.bmp") && loadTexture(popcorn, "Data/roof1.bmp");
+		Status = loadTexture(brick, "Data/brick.bmp") && loadTexture(carpet, "Data/carpet.bmp")
+			&& loadTexture(wood, "Data/wood-panel256.bmp") && loadTexture(popcorn, "Data/popcorn-ceiling.bmp");
 
 		// JPEG_Texture(TextureArray, "data/wood-panel.jpg", 0);
 
@@ -514,129 +848,69 @@ int LoadGLTextures()                                    // Load Bitmaps And Conv
         return Status;                                  // Return The Status
 }
 
-void renderBitmapLines(float x, float y, void *font, float lineSpacing, char *str)
+#ifdef USE_FONTS
+
+GLvoid BuildFont(GLvoid)								// Build Our Bitmap Font
 {
-	while (*str) {
-		// position to beginning of line
-		glRasterPos2f(x, y);
-		while (*str && *str != '\n')
-			glutBitmapCharacter(font, *str++);
-		if (*str == '\n') {
-			y += lineSpacing;
-			str++;
-		}
-	}
+	HFONT	font;										// Windows Font ID
+	HFONT	oldfont;									// Used For Good House Keeping
+
+	base = glGenLists(96);								// Storage For 96 Characters
+
+	font = CreateFont(	-24,							// Height Of Font
+						0,								// Width Of Font
+						0,								// Angle Of Escapement
+						0,								// Orientation Angle
+						FW_BOLD,						// Font Weight
+						FALSE,							// Italic
+						FALSE,							// Underline
+						FALSE,							// Strikeout
+						ANSI_CHARSET,					// Character Set Identifier
+						OUT_TT_PRECIS,					// Output Precision
+						CLIP_DEFAULT_PRECIS,			// Clipping Precision
+						ANTIALIASED_QUALITY,			// Output Quality
+						FF_DONTCARE|DEFAULT_PITCH,		// Family And Pitch
+						"Courier New");					// Font Name
+
+	oldfont = (HFONT)SelectObject(hDC, font);           // Selects The Font We Want
+	wglUseFontBitmaps(hDC, 32, 96, base);				// Builds 96 Characters Starting At Character 32
+	SelectObject(hDC, oldfont);							// Selects The Font We Want
+	DeleteObject(font);									// Delete The Font
 }
 
-// Create display lists to show text on HUD.
-// Changes current color.
-// Creates a DL at DLOuter, and an inner DL at DLOuter + 1. 
-// If those DLs exist already, they will be replaced.
-GLvoid createTextDLs(GLuint DLOuter, const char *fmt, ...)
+GLvoid KillFont(GLvoid)									// Delete The Font List
 {
-	GLuint DLInner = DLOuter + 1;						// nested display list
-	char		text[1024];								// Holds Our String
-	float x, y;
+	glDeleteLists(base, 96);							// Delete All 96 Characters
+}
+#endif // USE_FONTS
+
+
+GLvoid glPrint(const char *fmt, ...)					// Custom GL "Print" Routine
+{
+#ifdef USE_FONTS
+	char		text[256];								// Holds Our String
 	va_list		ap;										// Pointer To List Of Arguments
 
-	if (fmt == NULL)		// If There's No Text
+	if (fmt == NULL)									// If There's No Text
 		return;											// Do Nothing
 
-	if (strlen(fmt) > sizeof(text)) {					// obvious buffer overrun
-		errorMsg("Error: oversized fmt string exceeds createTextDLs buffer[%d]: '%s'\n",
-			sizeof(text), fmt);
-		return;
-	}
-
 	va_start(ap, fmt);									// Parses The String For Variables
-	vsprintf(text, fmt, ap);							// And Converts Symbols To Actual Numbers
+	    vsprintf(text, fmt, ap);						// And Converts Symbols To Actual Numbers
 	va_end(ap);											// Results Are Stored In Text
 
-	if (DLOuter == helpDLOuter)
-		x = 5, y = 30;
-	else
-		x = xRes - 100.0, y = yRes - 24.0;
-
-	glNewList(DLInner, GL_COMPILE);
-	renderBitmapLines(x, y, GLUT_BITMAP_HELVETICA_18, 24, text);
-	glEndList(); // DLInner
-
-	glNewList(DLOuter, GL_COMPILE);
-	// use HL orange. :-)
-	glColor3f(1.0f, 0.9f, 0.7f);
-	glCallList(DLInner);
-	// The following takes a long time when displaying help, but it makes
-	// the text much more legible; and who cares about frame rate while
-	// we're displaying help?
-	glColor3f(0, 0, 0); // black shadow
-	glTranslatef(1,1,0);  glCallList(DLInner);
-	glTranslatef(-2,0,0); glCallList(DLInner);
-	glTranslatef(0,-2,0); glCallList(DLInner);
-	glTranslatef(2,0,0);  glCallList(DLInner);
-	glEndList(); // DLOuter
-}
-
-void setOrthographicProjection() {
-
-	// switch to projection mode
-	glMatrixMode(GL_PROJECTION);
-	// save previous matrix which contains the 
-	//settings for the perspective projection
 	glPushMatrix();
-	// reset matrix
-	glLoadIdentity();
-	// set a 2D orthographic projection
-	gluOrtho2D(0, xRes, 0, yRes);
-	// invert the y axis, down is positive
-	glScalef(1, -1, 1);
-	// mover the origin from the bottom left corner
-	// to the upper left corner
-	glTranslatef(0, -yRes, 0);
-	glMatrixMode(GL_MODELVIEW);
-}
+	glTranslatef(1.0f, 0.5f, 3.05f);	// position text
+	glColor3f(1.0f, 1.0f, 1.0f);
+	// Position The Text On The Screen
+	glRasterPos2f(-0.0f, 0.35f); // Doesn't seem to do anything
 
-void resetPerspectiveProjection() {
-	glMatrixMode(GL_PROJECTION);
+	glPushAttrib(GL_LIST_BIT);							// Pushes The Display List Bits
+	glListBase(base - 32);								// Sets The Base Character to 32
+	glCallLists((GLsizei)strlen(text), GL_UNSIGNED_BYTE, text);	// Draws The Display List Text
+	glPopAttrib();										// Pops The Display List Bits
 	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
+#endif // USE_FONTS
 }
-
-
-// Draw any needed text.
-// Does not preserve any previous projection.
-void drawText()
-{
-	// calculate FPS. Thanks to http://nehe.gamedev.net/data/articles/article.asp?article=17
-	static int frames = 0;
-	static clock_t last_time = 0;
-	static float fps = 0.0;
-
-	clock_t time_now = clock();
-	++frames;
-	// To update FPS more frequently, change CLOCKS_PER_SEC to e.g. (CLOCKS_PER_SEC / 2)
-	if(time_now - last_time > CLOCKS_PER_SEC) {
-		// Calculate frames per second
-		// debugMsg("time_now: %d; last_time: %d; diff: %d; frames: %d\n", time_now, last_time, time_now - last_time, frames);
-		fps = ((float)frames * CLOCKS_PER_SEC)/(time_now - last_time);
-		createTextDLs(fpsDLOuter, "FPS: %2.2f", fps);
-		last_time = time_now;
-		frames = 0;
-	}
-
-	// Thanks to: http://glprogramming.com/red/chapter08.html#name1
-	// and http://www.lighthouse3d.com/opengl/glut/index.php?bmpfontortho
-	setOrthographicProjection();
-	glPushMatrix();
-	glLoadIdentity();
-
-	if (showFPS) glCallList(fpsDLOuter);
-	// else
-	if (showHelp) glCallList(helpDLOuter); // createTextDLs(helpText);
-
-	glPopMatrix();
-	resetPerspectiveProjection();	
-}
-
 
 GLvoid ReSizeGLScene(GLsizei width, GLsizei height)		// Resize And Initialize The GL Window
 {
@@ -677,17 +951,11 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
 	gluQuadricNormals(quadric, GLU_SMOOTH);	// Create Smooth Normals ( NEW )
 	gluQuadricTexture(quadric, GL_TRUE);		// Create Texture Coords ( NEW )
 
+#ifdef USE_FONTS
+	BuildFont();						// Build The Font
+#endif
+
 	SetupWorld();
-
-	// Create display lists for help and fps
-	helpDLOuter = glGenLists(4);
-	helpDLInner = helpDLOuter + 1;
-	fpsDLOuter = helpDLOuter + 2;
-	fpsDLInner = fpsDLOuter + 1;
-
-	// Initialize the help display list. The FPS DL is created every time FPS is recalculated.
-	createTextDLs(helpDLOuter, helpText);
-	createTextDLs(fpsDLOuter, "FPS: unknown");
 
 	return TRUE;										// Initialization Went OK
 }
@@ -701,7 +969,7 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 	}
 
 	glLoadIdentity();									// Reset The View matrix
-	
+
 	Cam.SetPerspective();
 
 	// apply friction:
@@ -713,7 +981,7 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 
 	//if (firstTime) debugMsg("beginning walls loop\n");
 
-	// debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
+	// debugMsg("zWalls[0][0][0].state = %d\n", zWalls[0][0][0].state);
 
 	// Brick texture: xWalls
 	glBindTexture(GL_TEXTURE_2D, textures[brick*numFilters+filter]);
@@ -726,14 +994,14 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 	// Process quads
 	glBegin(GL_QUADS);
 
-	for (int i=0; i <= maze.w; i++)
-		for (int j=0; j < maze.h; j++)
-			for (int k=0; k < maze.d; k++) {
-				if (maze.xWalls[i][j][k].state == Wall::CLOSED) {
+	for (int i=0; i <= w; i++)
+		for (int j=0; j < h; j++)
+			for (int k=0; k < d; k++) {
+				if (xWalls[i][j][k].state == Wall::CLOSED) {
 					//if (firstTime) {
 					//	debugMsg("drawing x wall %d,%d,%d: ", i, j, k); 
 					//}
-					maze.xWalls[i][j][k].draw('x');	// draw xWall
+					xWalls[i][j][k].draw('x');	// draw xWall
 				}
 			}
 	glEnd();
@@ -744,15 +1012,15 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 	// Process quads
 	glBegin(GL_QUADS);
 
-	for (int i=0; i < maze.w; i++)
-		for (int j=0; j < maze.h; j++)
-			for (int k=0; k <= maze.d; k++) {
+	for (int i=0; i < w; i++)
+		for (int j=0; j < h; j++)
+			for (int k=0; k <= d; k++) {
 
-				if (maze.zWalls[i][j][k].state == Wall::CLOSED) {
+				if (zWalls[i][j][k].state == Wall::CLOSED) {
 					//if (firstTime) {
 					//	debugMsg("drawing z wall %d,%d,%d: ", i, j, k); 
 					//}
-					maze.zWalls[i][j][k].draw('z'); // draw zWall
+					zWalls[i][j][k].draw('z'); // draw zWall
 				}
 			}
 	glEnd();
@@ -762,15 +1030,15 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 	// Process quads
 	glBegin(GL_QUADS);
 
-	for (int i=0; i < maze.w; i++)
-		for (int j=0; j <= maze.h; j++)
-			for (int k=0; k < maze.d; k++) {
-				if (maze.yWalls[i][j][k].state == Wall::CLOSED
-					&& !maze.yWalls[i][j][k].outsidePositive) {
+	for (int i=0; i < w; i++)
+		for (int j=0; j <= h; j++)
+			for (int k=0; k < d; k++) {
+				if (yWalls[i][j][k].state == Wall::CLOSED
+					&& !yWalls[i][j][k].outsidePositive) {
 					//if (firstTime) {
 					//	debugMsg("drawing y wall carpet %d,%d,%d\n", i, j, k);
 					//}
-					maze.yWalls[i][j][k].draw('y'); // draw yWall
+					yWalls[i][j][k].draw('y'); // draw yWall
 				}
 			}
 
@@ -786,25 +1054,23 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 	// Process quads
 	glBegin(GL_QUADS);
 
-	for (int i=0; i < maze.w; i++)
-		for (int j=0; j <= maze.h; j++)
-			for (int k=0; k < maze.d; k++) {
-				if (maze.yWalls[i][j][k].state == Wall::CLOSED
-					&& maze.yWalls[i][j][k].outsidePositive) {
+	for (int i=0; i < w; i++)
+		for (int j=0; j <= h; j++)
+			for (int k=0; k < d; k++) {
+				if (yWalls[i][j][k].state == Wall::CLOSED
+					&& yWalls[i][j][k].outsidePositive) {
 					//if (firstTime) {
 					//	debugMsg("drawing y wall popcorn %d,%d,%d\n", i, j, k);
 					//}
-					maze.yWalls[i][j][k].draw('y'); // draw yWall
+					yWalls[i][j][k].draw('y'); // draw yWall
 				}
 			}
 
 	glEnd();
 
 	// display entrance/exit (may mess up rot/transf matrix)
-	maze.ccEntrance.drawExit(maze.entranceWall, true);
-	maze.ccExit.drawExit(maze.exitWall, false);
-
-	drawText();											// draw any needed screen text, such as FPS
+	ccEntrance.drawExit(entranceWall, true);
+	ccExit.drawExit(exitWall, false);
 
 	firstTime = false;									// debugging
 	return TRUE;										// Everything Went OK
@@ -850,6 +1116,9 @@ GLvoid KillGLWindow(GLvoid)								// Properly Kill The Window
 		hInstance=NULL;									// Set hInstance To NULL
 	}
 
+#ifdef USE_FONTS
+	KillFont();
+#endif
 }
 
 /*	This Code Creates Our OpenGL Window.  Parameters Are:					*
@@ -1065,14 +1334,12 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,			// Handle For This Window
 		case WM_KEYDOWN:							// Is A Key Being Held Down?
 		{
 			keysDown[wParam] = TRUE;					// If So, Mark It As TRUE
-			autopilot = false;
 			return 0;								// Jump Back
 		}
 
 		case WM_KEYUP:								// Has A Key Been Released?
 		{
 			keysDown[wParam] = FALSE;					// If So, Mark It As FALSE
-			autopilot = false;
 			return 0;								// Jump Back
 		}
 
@@ -1093,10 +1360,10 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,			// Handle For This Window
 }
 
 void freeResources() {
-	delete [] maze.cells;
-	delete [] maze.xWalls;
-	delete [] maze.yWalls;
-	delete [] maze.zWalls;
+	delete [] cells;
+	delete [] xWalls;
+	delete [] yWalls;
+	delete [] zWalls;
 }
 
 int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
@@ -1145,7 +1412,6 @@ int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 				SwapBuffers(hDC);					// Swap Buffers (Double Buffering)
 				if (CheckKeys()) done = true;
 				else CheckMouse();
-				if (autopilot) runAutopilot();
 			}
 		}
 	}
@@ -1156,12 +1422,6 @@ int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 	return ((int)msg.wParam);								// Exit The Program
 }
 
-// FIXME: factor out common code, particularly for keys that are not held down, such as SPACE.
-// Make an array appKeys[] = { VK_SPACE, 'F', ... }
-// then loop through the array.
-// Maybe also use portable openGL code instead of windows-specific?
-// see http://www.lighthouse3d.com/opengl/glut/index.php?5
-// which may require changing all this to use a GLUT main loop.
 
 /* Check and process keyboard input. 
  * Return true iff quit requested. */
@@ -1185,21 +1445,11 @@ bool CheckKeys(void) {
 	// reset position / heading / pitch to the beginning of the maze.
 	if (keysDown[VK_HOME] && !keysStillDown[VK_HOME]) {
 		keysStillDown[VK_HOME]=TRUE;
-		maze.ccEntrance.standOutside(maze.entranceWall);
+		ccEntrance.standOutside(entranceWall);
 	}
 	else if (!keysDown[VK_HOME])
 	{
 		keysStillDown[VK_HOME]=FALSE;
-	}
-
-	// reset position / heading / pitch to the end of the maze.
-	if (keysDown[VK_END] && !keysStillDown[VK_END]) {
-		keysStillDown[VK_END]=TRUE;
-		maze.ccExit.standOutside(maze.exitWall);
-	}
-	else if (!keysDown[VK_END])
-	{
-		keysStillDown[VK_END]=FALSE;
 	}
 
 	// snap to grid
@@ -1244,15 +1494,15 @@ bool CheckKeys(void) {
 		keysStillDown['B']=FALSE;
 	}
 
-	if (keysDown[VK_RETURN] && !keysStillDown[VK_RETURN])
+	if (keysDown['P'] && !keysStillDown['P'])
 	{
 		// toggle autopilot
-		keysStillDown[VK_RETURN]=TRUE;
-		setAutopilot(!autopilot);
+		keysStillDown['P']=TRUE;
+		autopilot = !autopilot;
 	}
-	else if (!keysDown[VK_RETURN])
+	else if (!keysDown['P'])
 	{
-		keysStillDown[VK_RETURN]=FALSE;
+		keysStillDown['P']=FALSE;
 	}
 
 	if (keysDown['M'] && !keysStillDown['M'])
@@ -1270,7 +1520,7 @@ bool CheckKeys(void) {
 	{
 		// toggle collision checks
 		keysStillDown['C']=TRUE;
-		maze.checkCollisions = !maze.checkCollisions;
+		checkCollisions = !checkCollisions;
 		// should we give some visual feedback?
 	}
 	else if (!keysDown['C'])
@@ -1286,29 +1536,6 @@ bool CheckKeys(void) {
 	else if (!keysDown['F'])
 	{
 		keysStillDown['F']=FALSE;
-	}
-
-	// '/?' key: toggle help display
-	// Good grief, all we can call this is OEM_2?
-	if (keysDown[VK_OEM_2] && !keysStillDown[VK_OEM_2]) {
-		keysStillDown[VK_OEM_2]=TRUE;
-		showHelp = !showHelp;
-		// if (showHelp) showFPS = false;
-	}
-	else if (!keysDown[VK_OEM_2])
-	{
-		keysStillDown[VK_OEM_2]=FALSE;
-	}
-
-	// 'T' key: toggle fps display
-	if (keysDown['T'] && !keysStillDown['T']) {
-		keysStillDown['T']=TRUE;
-		showFPS = !showFPS;
-		// if (showFPS) showHelp = false;
-	}
-	else if (!keysDown['T'])
-	{
-		keysStillDown['T']=FALSE;
 	}
 
 	//if (keysDown['N'] && !keysStillDown['N'])
@@ -1433,7 +1660,7 @@ void CheckMouse(void)
  */
 bool collide(glPoint &p, glVector &v)
 {
-	if (!maze.checkCollisions) {
+	if (!checkCollisions) {
 		p += v;
 		return false;
 	}
@@ -1458,14 +1685,14 @@ bool collide(glPoint &p, glVector &v)
 	// - test if q is within wallMargin of wall
 	ncc.x = qcc.x - 1;
 	if (qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED
-		&& (q.x - (qcc.x * maze.cellSize) < maze.wallMargin)) {
-		q.x = qcc.x * maze.cellSize + maze.wallMargin;
+		&& (q.x - (qcc.x * cellSize) < wallMargin)) {
+		q.x = qcc.x * cellSize + wallMargin;
 		result = true;
 	} else {
 		ncc.x = qcc.x + 1;
 		if (qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED
-			&& (ncc.x * maze.cellSize) - q.x < maze.wallMargin) {
-			q.x = ncc.x * maze.cellSize - maze.wallMargin;
+			&& (ncc.x * cellSize) - q.x < wallMargin) {
+			q.x = ncc.x * cellSize - wallMargin;
 			result = true;
 		}
 	}
@@ -1473,14 +1700,14 @@ bool collide(glPoint &p, glVector &v)
 
 	ncc.y = qcc.y - 1;
 	if (qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED
-		&& (q.y - (qcc.y * maze.cellSize) < maze.wallMargin)) {
-		q.y = qcc.y * maze.cellSize + maze.wallMargin;
+		&& (q.y - (qcc.y * cellSize) < wallMargin)) {
+		q.y = qcc.y * cellSize + wallMargin;
 		result = true;
 	} else {	
 		ncc.y = qcc.y + 1;
 		if (qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED
-			&& (ncc.y * maze.cellSize) - q.y < maze.wallMargin) {
-			q.y = ncc.y * maze.cellSize - maze.wallMargin;
+			&& (ncc.y * cellSize) - q.y < wallMargin) {
+			q.y = ncc.y * cellSize - wallMargin;
 			result = true;
 		}
 	}
@@ -1488,14 +1715,14 @@ bool collide(glPoint &p, glVector &v)
 
 	ncc.z = qcc.z - 1;
 	if (qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED
-		&& (q.z - (qcc.z * maze.cellSize) < maze.wallMargin)) {
-		q.z = qcc.z * maze.cellSize + maze.wallMargin;
+		&& (q.z - (qcc.z * cellSize) < wallMargin)) {
+		q.z = qcc.z * cellSize + wallMargin;
 		result = true;
 	} else {	
 		ncc.z = qcc.z + 1;
 		if (qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED
-			&& (ncc.z * maze.cellSize) - q.z < maze.wallMargin) {
-			q.z = ncc.z * maze.cellSize - maze.wallMargin;
+			&& (ncc.z * cellSize) - q.z < wallMargin) {
+			q.z = ncc.z * cellSize - wallMargin;
 			result = true;
 		}
 	}
@@ -1508,17 +1735,3 @@ bool collide(glPoint &p, glVector &v)
 	v.k = -v.k; // flip z back
 	return result;
 }
-
-// Turn auto-pilot on or off.
-void setAutopilot(bool newAP) {
-	autopilot = newAP;
-	if (autopilot) {
-		// initialize autopilot
-	}
-}
-
-// Give autopilot a chance to direct movement (called only if autopilot is true)
-void runAutopilot() {
-
-}
-

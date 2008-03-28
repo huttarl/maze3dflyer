@@ -115,12 +115,6 @@
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
 			<File
-				RelativePath=".\Cell.cpp">
-			</File>
-			<File
-				RelativePath=".\CellCoord.cpp">
-			</File>
-			<File
 				RelativePath=".\glCamera.cpp">
 			</File>
 			<File
@@ -136,25 +130,13 @@
 				RelativePath=".\JPEG.cpp">
 			</File>
 			<File
-				RelativePath=".\Maze3D.cpp">
-			</File>
-			<File
 				RelativePath=".\maze3dflyer.cpp">
-			</File>
-			<File
-				RelativePath=".\Wall.cpp">
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
-			<File
-				RelativePath=".\Cell.h">
-			</File>
-			<File
-				RelativePath=".\CellCoord.h">
-			</File>
 			<File
 				RelativePath=".\glCamera.h">
 			</File>
@@ -170,15 +152,6 @@
 			<File
 				RelativePath=".\JPEG.h">
 			</File>
-			<File
-				RelativePath=".\Maze3D.h">
-			</File>
-			<File
-				RelativePath=".\maze3dflyer.h">
-			</File>
-			<File
-				RelativePath=".\Wall.h">
-			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
@@ -192,7 +165,7 @@
 			RelativePath=".\ideas-todos.txt">
 		</File>
 		<File
-			RelativePath=".\README.txt">
+			RelativePath=".\ReadMe.txt">
 		</File>
 	</Files>
 	<Globals>
