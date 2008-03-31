@@ -13,7 +13,7 @@
    - I'm not really using jpeg.cpp / jpeg.h, except that jpeg.h has #pragma comment(lib, "lib/jpeg.lib")
      lib/jpeg.lib seems to be used only for LoadBMP(). I should either
       - factor out LoadBMP (I believe the code is available on Nehe?) and get rid of jpeg.{cpp,h,lib}, or
-      *- actually use jpeg.lib and have jpg textures instead of BMP. jgp textures would be under 1/10th the size of BMP!
+      ##*- actually use jpeg.lib and have jpg textures instead of BMP. jgp textures would be under 1/10th the size of BMP!
  x ease of use: display help text ('?' to toggle; on by default)
 	(turns off fps? no)
 	x# need to make display list for shadowed text
@@ -33,7 +33,7 @@
      - could fudge it by drawing slightly-thick translucent polylines along edges of quads...
 	 - see http://glprogramming.com/red/chapter06.html
    - fog
-   - lighting (shadow) (lightmapping?)
+   - lighting (shadow) (lightmapping?) bump mapping?
    -* skybox / sky sphere (http://gpwiki.org/index.php/Sky_Box, http://www.mindcontrol.org/~hplus/graphics/skybox.html,
 	   http://www.morrowland.com/apron/tutorials/gl/gl_skybox.zip
 	   - allow switching skybox: e.g. use day/clouds, night/stars, mountains/lake, etc.
@@ -49,7 +49,10 @@
 		x set outsidePositive (done but buggy?)
 		x use outsidePositive to determine texture
      - higher-res ceiling texture
-	 - make textures tile better, or make them bigger and extend over multiple cubes (requires matching them up?)
+	 - ?make them bigger and extend over multiple cubes (requires matching them up?)
+	 - rock: need smaller scale, higher res
+	 - brick: need more variation among bricks
+	 - I lowered the contrast because they were glaring, but now they look washed-out.
    xq have entrance/exit discs rotate with system time
      xq and be textureless
  x* A consequence of the whole sparsity thing is having to place the entrance and exit more intelligently.

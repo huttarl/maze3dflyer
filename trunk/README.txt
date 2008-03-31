@@ -39,6 +39,11 @@ email: huttar dot net, username is lars
 http://www.huttar.net/lars-kathy/home.html
 
 Acknowledgements:
-http://www.3dmd.net/ for some textures: brickWall_tileable.jpg
+OpenGL explanations and examples:
+http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=10 for the basis of constructing a virtual world and moving around
+http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=Quaternion_Camera_Class for composed 3D camera rotation
+http://www.morrowland.com/apron/tutorials/gl/gl_jpeg_loader.zip for JPEG loader
+Textures (some only historically used):
+http://www.3dmd.net/
 http://www.stormvisions.com/3DGS/roof1.jpg
 http://www.sharecg.com/

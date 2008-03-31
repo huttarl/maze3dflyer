@@ -121,6 +121,9 @@
 				RelativePath=".\CellCoord.cpp">
 			</File>
 			<File
+				RelativePath=".\display.cpp">
+			</File>
+			<File
 				RelativePath=".\glCamera.cpp">
 			</File>
 			<File
@@ -154,6 +157,9 @@
 			</File>
 			<File
 				RelativePath=".\CellCoord.h">
+			</File>
+			<File
+				RelativePath=".\display.h">
 			</File>
 			<File
 				RelativePath=".\glCamera.h">
