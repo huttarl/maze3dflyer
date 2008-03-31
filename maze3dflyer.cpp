@@ -41,6 +41,7 @@
 #include "Maze3D.h"
 #include "CellCoord.h"
 #include "glCamera.h"
+#include "jpeg.h"
 
 void setAutopilot(bool newAP);
 void runAutopilot();
@@ -101,10 +102,10 @@ GLfloat xheading = 0.0f, yheading = 0.0f;
 GLfloat xpos = 0.5f, ypos = 0.5f, zpos = 10.0f;
 GLUquadricObj *quadric;	
 
-const numFilters = 3;		// How many filters for each texture
-GLuint filter = 2;				// Which Filter To Use
-typedef enum { brick, carpet, wood, popcorn } Material;
-const numTextures = (popcorn - brick + 1);		// Max # textures (not counting filtering)
+const int numFilters = 3;		// How many filters for each texture
+GLuint filter = 2;				// Which filter to use
+typedef enum { ground, wall1, wall2, roof } Material;
+const int numTextures = (roof - ground + 1);		// Max # textures (not counting filtering)
 GLuint	textures[numFilters * numTextures];		// Storage for 4 texture indexes, with 3 filters each.
 
 //FIXME: read this from a text file at runtime?
@@ -435,7 +436,7 @@ void SetupWorld()
 	return;
 }
 
-// To do: transfer those photos I took from the camera (walls, ceiling/floor)
+// To do: transfer those photos I took from the camera (walls, roof, ground/floor)
 AUX_RGBImageRec *LoadBMP(char *Filename)                // Loads A Bitmap Image
 {
         FILE *File=NULL;                                // File Handle
@@ -455,63 +456,53 @@ AUX_RGBImageRec *LoadBMP(char *Filename)                // Loads A Bitmap Image
         return NULL;                                    // If Load Failed Return NULL
 }
 
-int loadTexture(int i, char *filepath) {
-    AUX_RGBImageRec *TextureImage[1];               // Create Storage Space For The Texture
-		// UINT textureArray[1]; // for jpeg
-	int Status = FALSE;
+// Load an image from a file, and create textures from it using multiple filters.
+// Return True if load succeeded.
+bool loadTexture(int i, char *filepath) {
+	bool status = TRUE;
 
-    memset(TextureImage, 0, sizeof(void *)*1);        // Set The Pointer To NULL
+	if(!filepath) return FALSE;
+	tImageJPG *pBitMap = Load_JPEG(filepath);
+	if(!pBitMap || !pBitMap->data) return FALSE;
 
-	if (TextureImage[0] = LoadBMP(filepath)) {
-        Status=TRUE;                            // Set The Status To TRUE
+    glGenTextures(numFilters, &textures[numFilters*i]);          // Create 3 filtered textures
 
-        glGenTextures(numFilters, &textures[numFilters*i]);          // Create 3 filtered textures
+	// Create Nearest Filtered Texture
+	debugMsg("Binding texture %s at %d\n", filepath, numFilters*i + 0);
+	glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 0]);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, pBitMap->sizeX, pBitMap->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, pBitMap->data);
 
-		// Create Nearest Filtered Texture
-		debugMsg("Binding texture %s at %d\n", filepath, numFilters*i+0);
-		glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 0]);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-		glTexImage2D(GL_TEXTURE_2D, 0, 3, TextureImage[0]->sizeX, TextureImage[0]->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, TextureImage[0]->data);
+    // Create Linear Filtered Texture
+	debugMsg("Binding texture %s at %d\n", filepath, numFilters*i + 1);
+    glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 1]);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, pBitMap->sizeX, pBitMap->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, pBitMap->data);
 
-        // Create Linear Filtered Texture
-		debugMsg("Binding texture %s at %d\n", filepath, numFilters*i+1);
-        glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 1]);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-        glTexImage2D(GL_TEXTURE_2D, 0, 3, TextureImage[0]->sizeX, TextureImage[0]->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, TextureImage[0]->data);
+	// Create MipMapped Texture
+	debugMsg("Binding texture %s at %d\n", filepath, numFilters*i + 2);
+	glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 2]);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST);
+	gluBuild2DMipmaps(GL_TEXTURE_2D, 3, pBitMap->sizeX, pBitMap->sizeY, GL_RGB, GL_UNSIGNED_BYTE, pBitMap->data);
 
-		// Create MipMapped Texture
-		debugMsg("Binding texture %s at %d\n", filepath, numFilters*i+2);
-		glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 2]);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST);
-		gluBuild2DMipmaps(GL_TEXTURE_2D, 3, TextureImage[0]->sizeX, TextureImage[0]->sizeY, GL_RGB, GL_UNSIGNED_BYTE, TextureImage[0]->data);
-    }
-    if (TextureImage[0])                            // If Texture Exists
-    {
-        if (TextureImage[0]->data)              // If Texture Image Exists
-        {
-                free(TextureImage[0]->data);    // Free The Texture Image Memory
-        }
-
-        free(TextureImage[0]);                  // Free The Image Structure
-    }
-	return Status;
+	free(pBitMap->data);			
+	free(pBitMap);
+	return status;
 }
 
-int LoadGLTextures()                                    // Load Bitmaps And Convert To Textures
+bool LoadGLTextures()                                    // Load images and convert to textures
 {
-        int Status=FALSE;                               // Status Indicator
-        // Load The Bitmap, Check For Errors, If Bitmap's Not Found Quit
+        bool status=FALSE;                               // status Indicator
+        // load the image, check for errors; if it's not found, quit.
 
-		Status = loadTexture(brick, "Data/brickWall_tileable.bmp") && loadTexture(carpet, "Data/carpet-6716-2x2mir.bmp")
-			&& loadTexture(wood, "Data/rocky.bmp") && loadTexture(popcorn, "Data/roof1.bmp");
+		status = loadTexture(wall1, "Data/brickWall_tileable.jpg") && loadTexture(ground, "Data/carpet-6716-2x2mir.jpg")
+			&& loadTexture(wall2, "Data/rocky.jpg") && loadTexture(roof, "Data/roof1.jpg");
 
-		// JPEG_Texture(TextureArray, "data/wood-panel.jpg", 0);
-
-		debugMsg("Texture load status: %d\n", Status);
-        return Status;                                  // Return The Status
+		debugMsg("Texture load status: %d\n", status);
+        return status;                                  // Return The Status
 }
 
 void renderBitmapLines(float x, float y, void *font, float lineSpacing, char *str)
@@ -715,8 +706,8 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 
 	// debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
 
-	// Brick texture: xWalls
-	glBindTexture(GL_TEXTURE_2D, textures[brick*numFilters+filter]);
+	// wall1 texture: xWalls
+	glBindTexture(GL_TEXTURE_2D, textures[wall1 * numFilters+filter]);
 
 #ifdef DEBUGGING
 	//// cylinders for z-axis identification
@@ -738,8 +729,8 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 			}
 	glEnd();
 
-	// Wood panel texture: zWalls
-	glBindTexture(GL_TEXTURE_2D, textures[wood*numFilters+filter]);
+	// wall2 panel texture: zWalls
+	glBindTexture(GL_TEXTURE_2D, textures[wall2 * numFilters+filter]);
 
 	// Process quads
 	glBegin(GL_QUADS);
@@ -757,8 +748,8 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 			}
 	glEnd();
 
-	// floor texture
-	glBindTexture(GL_TEXTURE_2D, textures[carpet*numFilters+filter]);
+	// ground texture
+	glBindTexture(GL_TEXTURE_2D, textures[ground * numFilters + filter]);
 	// Process quads
 	glBegin(GL_QUADS);
 
@@ -768,7 +759,7 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 				if (maze.yWalls[i][j][k].state == Wall::CLOSED
 					&& !maze.yWalls[i][j][k].outsidePositive) {
 					//if (firstTime) {
-					//	debugMsg("drawing y wall carpet %d,%d,%d\n", i, j, k);
+					//	debugMsg("drawing y wall %d,%d,%d\n", i, j, k);
 					//}
 					maze.yWalls[i][j][k].draw('y'); // draw yWall
 				}
@@ -776,11 +767,11 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 
 	glEnd();
 
-	// popcorn ceiling texture
-	glBindTexture(GL_TEXTURE_2D, textures[popcorn*numFilters+filter]);
+	// roof/ceiling texture
+	glBindTexture(GL_TEXTURE_2D, textures[roof * numFilters+filter]);
 	// glColor3f(1.0f, 0.5f, 0.5f); // temp for debugging
 	//if (firstTime) {
-	//	debugMsg("Binding popcorn texture at %d\n", popcorn*numFilters+filter);
+	//	debugMsg("Binding roof texture at %d\n", roof*numFilters+filter);
 	//}
 
 	// Process quads
@@ -792,7 +783,7 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 				if (maze.yWalls[i][j][k].state == Wall::CLOSED
 					&& maze.yWalls[i][j][k].outsidePositive) {
 					//if (firstTime) {
-					//	debugMsg("drawing y wall popcorn %d,%d,%d\n", i, j, k);
+					//	debugMsg("drawing y wall roof %d,%d,%d\n", i, j, k);
 					//}
 					maze.yWalls[i][j][k].draw('y'); // draw yWall
 				}
