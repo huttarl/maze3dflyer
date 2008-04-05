@@ -14,6 +14,12 @@
      lib/jpeg.lib seems to be used only for LoadBMP(). I should either
       - factor out LoadBMP (I believe the code is available on Nehe?) and get rid of jpeg.{cpp,h,lib}, or
       ##*- actually use jpeg.lib and have jpg textures instead of BMP. jgp textures would be under 1/10th the size of BMP!
+      OK, this is done, but the result is stripey textures on 3 out of 4.
+      Maybe I need a different jpeg loader? e.g. maybe http://members.iinet.net.au/~cleathley/openGL/TextureLoader.htm
+      but that's for Windows only, and supports jpg/bmp/gif/tga but not png
+      Is there a cross-platform one?
+      Anyway, for now I put the bmp-loading code back, with jpg loading as an ifdef,
+      until I can get it fixed.
  x ease of use: display help text ('?' to toggle; on by default)
 	(turns off fps? no)
 	x# need to make display list for shadowed text

@@ -36,12 +36,17 @@
 #include <gl/glu.h>			// 
 #include <gl/glut.h>		// (glut.h actually includes gl and glu.h, so we're redundant)
 
+// #define USE_JPG // Use BMP format for now instead of JPG. Currently JPG loading has stripey problems.
+#define DEBUGGING 1
+
 #include "maze3dflyer.h"
 #include "Wall.h"
 #include "Maze3D.h"
 #include "CellCoord.h"
 #include "glCamera.h"
-#include "jpeg.h"
+#ifdef USE_JPG
+#   include "jpeg.h"
+#endif
 
 void setAutopilot(bool newAP);
 void runAutopilot();
@@ -56,8 +61,6 @@ bool CheckKeys(void);
 
 glCamera Cam;				// Our Camera for moving around and setting prespective
 							// on things.
-
-#define DEBUGGING 1
 
 HDC			hDC=NULL;		// Private GDI Device Context
 HGLRC		hRC=NULL;		// Permanent Rendering Context
@@ -460,10 +463,18 @@ AUX_RGBImageRec *LoadBMP(char *Filename)                // Loads A Bitmap Image
 // Return True if load succeeded.
 bool loadTexture(int i, char *filepath) {
 	bool status = TRUE;
-
 	if(!filepath) return FALSE;
+
+#ifdef USE_JPG
 	tImageJPG *pBitMap = Load_JPEG(filepath);
-	if(!pBitMap || !pBitMap->data) return FALSE;
+#   define bitmap pBitMap
+#else
+    AUX_RGBImageRec *TextureImage[1];               // Create Storage Space For The Texture
+	TextureImage[0] = LoadBMP(filepath);
+#   define bitmap (TextureImage[0])
+#endif
+
+	if(!bitmap || !bitmap->data) return FALSE;
 
     glGenTextures(numFilters, &textures[numFilters*i]);          // Create 3 filtered textures
 
@@ -472,24 +483,24 @@ bool loadTexture(int i, char *filepath) {
 	glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 0]);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, pBitMap->sizeX, pBitMap->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, pBitMap->data);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, bitmap->sizeX, bitmap->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
 
     // Create Linear Filtered Texture
 	debugMsg("Binding texture %s at %d\n", filepath, numFilters*i + 1);
     glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 1]);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, pBitMap->sizeX, pBitMap->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, pBitMap->data);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, bitmap->sizeX, bitmap->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
 
 	// Create MipMapped Texture
 	debugMsg("Binding texture %s at %d\n", filepath, numFilters*i + 2);
 	glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 2]);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST);
-	gluBuild2DMipmaps(GL_TEXTURE_2D, 3, pBitMap->sizeX, pBitMap->sizeY, GL_RGB, GL_UNSIGNED_BYTE, pBitMap->data);
+	gluBuild2DMipmaps(GL_TEXTURE_2D, 3, bitmap->sizeX, bitmap->sizeY, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
 
-	free(pBitMap->data);			
-	free(pBitMap);
+	free(bitmap->data);			
+	free(bitmap);
 	return status;
 }
 
@@ -498,9 +509,13 @@ bool LoadGLTextures()                                    // Load images and conv
         bool status=FALSE;                               // status Indicator
         // load the image, check for errors; if it's not found, quit.
 
+#ifdef USE_JPG
 		status = loadTexture(wall1, "Data/brickWall_tileable.jpg") && loadTexture(ground, "Data/carpet-6716-2x2mir.jpg")
 			&& loadTexture(wall2, "Data/rocky.jpg") && loadTexture(roof, "Data/roof1.jpg");
-
+#else
+		status = loadTexture(wall1, "Data/brickWall_tileable.bmp") && loadTexture(ground, "Data/carpet-6716-2x2mir.bmp")
+			&& loadTexture(wall2, "Data/rocky.bmp") && loadTexture(roof, "Data/roof1.bmp");
+#endif
 		debugMsg("Texture load status: %d\n", status);
         return status;                                  // Return The Status
 }
