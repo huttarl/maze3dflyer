@@ -43,13 +43,13 @@
 #include "Wall.h"
 #include "Maze3D.h"
 #include "CellCoord.h"
+#include "Autopilot.h"
 #include "glCamera.h"
 #ifdef USE_JPG
 #   include "jpeg.h"
 #endif
 
-void setAutopilot(bool newAP);
-void runAutopilot();
+void setAutopilotMode(bool newAPM);
 
 // Maze::collide?
 /* Return true iff moving from point p along vector v would collide with a wall. */
@@ -61,6 +61,7 @@ bool CheckKeys(void);
 
 glCamera Cam;				// Our Camera for moving around and setting prespective
 							// on things.
+Autopilot *ap;				// autopilot instance
 
 HDC			hDC=NULL;		// Private GDI Device Context
 HGLRC		hRC=NULL;		// Permanent Rendering Context
@@ -80,7 +81,7 @@ bool	keysStillDown[256];	// keys for which we have already processed inital down
 bool	active=TRUE;		// Window Active Flag Set To TRUE By Default
 bool	fullscreen=TRUE;	// Fullscreen Flag Set To Fullscreen Mode By Default
 bool	blend=FALSE;		// Blending ON/OFF
-bool	autopilot=TRUE;		// Autopilot on?
+bool	autopilotMode=TRUE;		// autopilotMode on?
 bool	mouseGrab=FALSE;		// mouse centering is on?
 bool	showFPS=FALSE;		// whether to display frames-per-second stat
 bool	showHelp=TRUE;		// show help text
@@ -432,7 +433,8 @@ void SetupWorld()
 	//Cam.m_Position.z = -15.0f * maze.cellSize;
 	maze.ccEntrance.standOutside(maze.entranceWall);
 
-	
+	ap = new Autopilot();
+	ap->init(maze, Cam);
 
 	memset((void *)keysDown, 0, sizeof(keysDown));
 	memset((void *)keysStillDown, 0, sizeof(keysStillDown));
@@ -1071,14 +1073,14 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,			// Handle For This Window
 		case WM_KEYDOWN:							// Is A Key Being Held Down?
 		{
 			keysDown[wParam] = TRUE;					// If So, Mark It As TRUE
-			autopilot = false;
+			autopilotMode = false;
 			return 0;								// Jump Back
 		}
 
 		case WM_KEYUP:								// Has A Key Been Released?
 		{
 			keysDown[wParam] = FALSE;					// If So, Mark It As FALSE
-			autopilot = false;
+			autopilotMode = false;
 			return 0;								// Jump Back
 		}
 
@@ -1151,7 +1153,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 				SwapBuffers(hDC);					// Swap Buffers (Double Buffering)
 				if (CheckKeys()) done = true;
 				else CheckMouse();
-				if (autopilot) runAutopilot();
+				if (autopilotMode) ap->run();
 			}
 		}
 	}
@@ -1252,9 +1254,9 @@ bool CheckKeys(void) {
 
 	if (keysDown[VK_RETURN] && !keysStillDown[VK_RETURN])
 	{
-		// toggle autopilot
+		// toggle autopilotMode
 		keysStillDown[VK_RETURN]=TRUE;
-		setAutopilot(!autopilot);
+		setAutopilotMode(!autopilotMode);
 	}
 	else if (!keysDown[VK_RETURN])
 	{
@@ -1516,15 +1518,11 @@ bool collide(glPoint &p, glVector &v)
 }
 
 // Turn auto-pilot on or off.
-void setAutopilot(bool newAP) {
-	autopilot = newAP;
-	if (autopilot) {
+void setAutopilotMode(bool newAP) {
+	autopilotMode = newAP;
+	if (autopilotMode) {
 		// initialize autopilot
+		maze.ccEntrance.standOutside(maze.entranceWall);
+		ap->addMove(Autopilot::Forward);
 	}
 }
-
-// Give autopilot a chance to direct movement (called only if autopilot is true)
-void runAutopilot() {
-
-}
-
