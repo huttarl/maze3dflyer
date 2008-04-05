@@ -105,6 +105,7 @@
    x forward accel/decel
      x we have some of this now.
    * autopilot, following maze
+     *- make move queue keep track of expected position (cellcoord)
      - requires solver
      - don't decel/accel between consecutive forward autopilot moves
      - enhancement: back out of short dead-ends, instead of doing 180
