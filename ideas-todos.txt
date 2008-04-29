@@ -57,7 +57,7 @@
      - higher-res ceiling texture
 	 - ?make them bigger and extend over multiple cubes (requires matching them up?)
 	 - rock: need smaller scale, higher res
-	 - brick: need more variation among bricks
+	 x brick: need more variation among bricks
 	 - I lowered the contrast because they were glaring, but now they look washed-out.
    xq have entrance/exit discs rotate with system time
      xq and be textureless
@@ -153,6 +153,8 @@
 	not manhattan distance, to avoid direct diagonal adjacency.
  - a command to show the maze solution (route from entrance to exit), e.g. as a red line (cylinder)
  - put some objects into the maze, for interest?
+   - maybe dynamic, framed pictures on the walls, fetched from internet (google image search?) or from a folder,
+     changed periodically while playing
  *x use floor/wall/ceiling textures
    x I'm loading carpet and brick; why isn't it showing brick? probably because of begin/end
  x maybe avoid colliding with walls; see Fich demo for that.
