@@ -86,6 +86,7 @@ bool	mouseGrab=FALSE;		// mouse centering is on?
 bool	showFPS=FALSE;		// whether to display frames-per-second stat
 bool	showHelp=TRUE;		// show help text
 
+float   friction = 0.9f; // how fast velocity degrades
 float	keyTurnRate = 2.0f; // how fast to turn in response to keys
 float	keyAccelRate = 0.1f; // how fast to accelerate in response to keys
 float	keyMoveRate = 0.1f;  // how fast to move in response to keys
@@ -174,7 +175,7 @@ LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);	// Declaration For WndProc
 // within distance k of each other unless they are connected as directly as possible.
 void generateMaze()
 {
-	CellCoord *queue = new CellCoord[maze.w*maze.h*maze.d], *currCell, temp, neighbors[6];
+	CellCoord *queue = new CellCoord[maze.w * maze.h * maze.d], *currCell, temp, neighbors[6];
 	int queueSize = 0, addedNeighbors = 0, eemhdist = 0, ncmhdist = 0;
 
 	srand((int)time(0));
@@ -614,20 +615,22 @@ void resetPerspectiveProjection() {
 // Does not preserve any previous projection.
 void drawText()
 {
-	// calculate FPS. Thanks to http://nehe.gamedev.net/data/articles/article.asp?article=17
+	// calculate framerate. Thanks to http://nehe.gamedev.net/data/articles/article.asp?article=17
 	static int frames = 0;
 	static clock_t last_time = 0;
-	static float fps = 0.0;
 
 	clock_t time_now = clock();
 	++frames;
-	// To update FPS more frequently, change CLOCKS_PER_SEC to e.g. (CLOCKS_PER_SEC / 2)
+	// To update framerate more frequently, change CLOCKS_PER_SEC to e.g. (CLOCKS_PER_SEC / 2)
 	if(time_now - last_time > CLOCKS_PER_SEC) {
 		// Calculate frames per second
 		// debugMsg("time_now: %d; last_time: %d; diff: %d; frames: %d\n", time_now, last_time, time_now - last_time, frames);
-		fps = ((float)frames * CLOCKS_PER_SEC)/(time_now - last_time);
-		createTextDLs(fpsDLOuter, "FPS: %2.2f", fps);
-		last_time = time_now;
+		Cam.m_framerate = ((float)frames * CLOCKS_PER_SEC)/(time_now - last_time);
+		createTextDLs(fpsDLOuter, "FPS: %2.2f", Cam.m_framerate);
+                if (Cam.m_framerate < Cam.m_minframerate) Cam.m_framerate = Cam.m_minframerate; // can't go too low or the following division will make things go wacky.
+                Cam.m_framerateAdjust = Cam.m_targetframerate / Cam.m_framerate;
+
+                last_time = time_now;
 		frames = 0;
 	}
 
@@ -713,8 +716,8 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 	Cam.SetPerspective();
 
 	// apply friction:
-	Cam.m_ForwardVelocity *= 0.9f;
-	Cam.m_SidewaysVelocity *= 0.9f;
+	Cam.m_ForwardVelocity *= friction;
+	Cam.m_SidewaysVelocity *= friction;
 
 	// reset white color (default)
 	glColor3f(1.0f, 1.0f, 1.0f);

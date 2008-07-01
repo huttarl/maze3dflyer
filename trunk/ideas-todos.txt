@@ -5,6 +5,12 @@
    *x structure?
    *x move code to maze3dflyer and commit.
    *- notify nehedev@gmail.com - they indicated a desire to post it on nehe.
+ - add code to set goal of navigating from entrance to exit, and time player
+   - detect "entered" / "exited" state
+     - if just inside entrance, then state := "entered".
+     - if just outside exit and state == entered, then finished
+     - if just outside entrance or exit, state := exited
+   - how to know if player backed out??
  - clean up code, including "borrowed" code
    x maybe factor some out, e.g. maze gen, display, each class into a .h
      x most of this is done.
