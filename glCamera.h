@@ -34,6 +34,10 @@ public:
 	glQuaternion m_qPitch;
 	glPoint m_Position;
 	glVector m_DirectionVector;
+        GLfloat m_framerate;
+        GLfloat m_targetframerate;      // target framerate: acceleration / velocity is geared toward this.
+        GLfloat m_minframerate; // assume this framerate even if we're not achieving it.
+        GLfloat m_framerateAdjust; // ratio of target framerate to actual framerate: for adjusting framerate-dependent speed/accel.
 
 	void AccelForward(GLfloat vel);
 	void AccelSideways(GLfloat vel);

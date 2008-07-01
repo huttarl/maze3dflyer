@@ -24,6 +24,10 @@ glCamera::glCamera()
 	m_MaxVelocity			= 0.0f;
 	m_ForwardVelocity		= 0.0f;
 	m_SidewaysVelocity		= 0.0f;
+        m_targetframerate                     = 30.0f;
+        m_framerate                           = m_targetframerate; // needs an initial value till we figure actual framerate
+        m_minframerate = 5.0f;
+        m_framerateAdjust = 1.0f;
 }
 
 glCamera::~glCamera()
@@ -77,6 +81,8 @@ void glCamera::SetPerspective()
 	m_DirectionVector *= m_ForwardVelocity;
 	rightVector *= m_SidewaysVelocity / rightVector.magnitude();
 	m_DirectionVector += rightVector;
+
+        m_DirectionVector *= m_framerateAdjust;
 
 	// Check for collision and adjust position accordingly.
 	// Increment our position by the vector if no collision.
@@ -203,7 +209,10 @@ void glCamera::AccelForward(GLfloat accel)
 {
 	//debugMsg("%2.2f + AccelForward(%2.2f): ", m_ForwardVelocity, accel);
 	GLfloat nv, mfv2; // temp new velocity values
-	if (accel > m_MaxAccel) accel = m_MaxAccel;
+        // adjust acceleration amount based on framerate.
+        accel = accel * m_framerateAdjust;
+
+        if (accel > m_MaxAccel) accel = m_MaxAccel;
 	else if (accel < -m_MaxAccel) accel = -m_MaxAccel;
 
 	nv = m_ForwardVelocity + accel;
@@ -218,7 +227,10 @@ void glCamera::AccelForward(GLfloat accel)
 void glCamera::AccelSideways(GLfloat accel)
 {
 	GLfloat nv, msv2; // temp new velocity values
-	if (accel > m_MaxAccel) accel = m_MaxAccel;
+        // adjust acceleration amount based on framerate.
+        accel = accel * m_framerateAdjust;
+
+        if (accel > m_MaxAccel) accel = m_MaxAccel;
 	else if (accel < -m_MaxAccel) accel = -m_MaxAccel;
 
 	nv = m_SidewaysVelocity + accel;
