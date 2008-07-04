@@ -14,6 +14,13 @@ extern float	keyTurnRate; // how fast to turn in response to keys
 extern float	keyAccelRate; // how fast to accelerate in response to keys
 extern float	keyMoveRate;  // how fast to move in response to keys
 
+extern const int numFilters;		// How many filters for each texture
+extern GLuint filter;				// Which filter to use
+extern GLuint textures[]; // texture indexes ("names")
+extern GLuint facadeDL; // needed by Wall.cpp
+
+typedef enum { ground, wall1, wall2, portal, roof } Material;
+
 extern GLUquadricObj *quadric;	
 
 #endif                  /* __maze3dflyer_h__ */

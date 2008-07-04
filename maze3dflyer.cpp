@@ -68,7 +68,7 @@ HGLRC		hRC=NULL;		// Permanent Rendering Context
 HWND		hWnd=NULL;		// Holds Our Window Handle
 HINSTANCE	hInstance;		// Holds The Instance Of The Application
 
-GLuint	helpDLInner, helpDLOuter, fpsDLInner, fpsDLOuter; // display list ID's
+GLuint	helpDLInner, helpDLOuter, fpsDLInner, fpsDLOuter, facadeDL; // display list ID's
 
 const float piover180 = 0.0174532925f;
 int xRes = 1024;
@@ -79,14 +79,14 @@ bool	keysDown[256];		// keys for which we have received down events (and no rele
 bool	keysStillDown[256];	// keys for which we have already processed inital down events (and no release)
 							// keysStillDown[] is the equivalent of what used to be mp, bp, etc.
 bool	active=TRUE;		// Window Active Flag Set To TRUE By Default
-bool	fullscreen=TRUE;	// Fullscreen Flag Set To Fullscreen Mode By Default
+bool	fullscreen=FALSE;	// Fullscreen Flag Set To Fullscreen Mode By Default
 bool	blend=FALSE;		// Blending ON/OFF
 bool	autopilotMode=TRUE;		// autopilotMode on?
 bool	mouseGrab=FALSE;		// mouse centering is on?
-bool	showFPS=FALSE;		// whether to display frames-per-second stat
+bool	showFPS=TRUE;		// whether to display frames-per-second stat
 bool	showHelp=TRUE;		// show help text
 
-float   friction = 0.9f; // how fast velocity degrades
+// these should probably move to glCamera or a subclass thereof.
 float	keyTurnRate = 2.0f; // how fast to turn in response to keys
 float	keyAccelRate = 0.1f; // how fast to accelerate in response to keys
 float	keyMoveRate = 0.1f;  // how fast to move in response to keys
@@ -109,9 +109,8 @@ GLUquadricObj *quadric;
 
 const int numFilters = 3;		// How many filters for each texture
 GLuint filter = 2;				// Which filter to use
-typedef enum { ground, wall1, wall2, roof } Material;
 const int numTextures = (roof - ground + 1);		// Max # textures (not counting filtering)
-GLuint	textures[numFilters * numTextures];		// Storage for 4 texture indexes, with 3 filters each.
+GLuint	textures[numFilters * numTextures];		// Storage for texture indexes, with 3 filters each.
 
 //FIXME: read this from a text file at runtime?
 static char helpText[] = "Controls:\n\
@@ -514,10 +513,10 @@ bool LoadGLTextures()                                    // Load images and conv
 
 #ifdef USE_JPG
 		status = loadTexture(wall1, "Data/brickWall_tileable.jpg") && loadTexture(ground, "Data/carpet-6716-2x2mir.jpg")
-			&& loadTexture(wall2, "Data/rocky.jpg") && loadTexture(roof, "Data/roof1.jpg");
+			&& loadTexture(wall2, "Data/rocky.jpg") && loadTexture(roof, "Data/roof1.jpg") && loadTexture(portal, "Data/wood-planks-4227.jpg");
 #else
 		status = loadTexture(wall1, "Data/brickWall_tileable.bmp") && loadTexture(ground, "Data/carpet-6716-2x2mir.bmp")
-			&& loadTexture(wall2, "Data/rocky.bmp") && loadTexture(roof, "Data/roof1.bmp");
+			&& loadTexture(wall2, "Data/rocky.bmp") && loadTexture(roof, "Data/roof1.bmp") && loadTexture(portal, "Data/wood-planks-4227.bmp");
 #endif
 		debugMsg("Texture load status: %d\n", status);
         return status;                                  // Return The Status
@@ -564,7 +563,7 @@ GLvoid createTextDLs(GLuint DLOuter, const char *fmt, ...)
 	if (DLOuter == helpDLOuter)
 		x = 5, y = 30;
 	else
-		x = xRes - 100.0, y = yRes - 24.0;
+		x = xRes - 100.0, y = yRes - 24.0; //TODO ###: could count lines in text and adjust y to yRes - 24.0 * lines.
 
 	glNewList(DLInner, GL_COMPILE);
 	renderBitmapLines(x, y, GLUT_BITMAP_HELVETICA_18, 24, text);
@@ -583,6 +582,96 @@ GLvoid createTextDLs(GLuint DLOuter, const char *fmt, ...)
 	glTranslatef(0,-2,0); glCallList(DLInner);
 	glTranslatef(2,0,0);  glCallList(DLInner);
 	glEndList(); // DLOuter
+}
+
+// Create display lists to draw exit/entrance facade.
+// If this DL exists already, it will be replaced.
+GLvoid createFacadeDL(GLuint facadeDL)
+{
+   glNewList(facadeDL, GL_COMPILE);
+
+   // use portal texture
+   glBindTexture(GL_TEXTURE_2D, textures[portal * numFilters + filter]);
+
+   glBegin(GL_QUADS);
+
+   // We're drawing it here with the outside facing down.
+   // So if it needs to face opposite, we need to rotate 180 degrees when drawing.
+
+   GLfloat cellRad = Maze3D::cellSize / 2.0;
+   GLfloat holeRad = Maze3D::exitHoleRadius;
+   GLfloat texEdge1 = 0.5 - (holeRad / Maze3D::cellSize), texEdge2 = 0.5 + (holeRad / Maze3D::cellSize);
+   GLfloat th = Maze3D::exitThickness;
+   GLuint i;
+
+   // loop through two instances of this surface
+   for (i = 0; i < 2; i++) {
+      GLfloat z = (i == 0) ? 0.0 : th;
+      if (i == 0)
+         glNormal3f(0.0, 0.0, -1.0);
+      else
+         glNormal3f(0.0, 0.0, 1.0);
+
+      // Draw in the Z plane, at origin, as rotation matrices used in drawing this DL will expect that.
+      // top panel
+      glTexCoord2f(0.0, 0.0); glVertex3f(+cellRad, +cellRad, z);
+      glTexCoord2f(1.0, 0.0); glVertex3f(-cellRad, +cellRad, z);
+      glTexCoord2f(1.0, texEdge1); glVertex3f(-cellRad, +holeRad, z);
+      glTexCoord2f(0.0, texEdge1); glVertex3f(+cellRad, +holeRad, z);
+
+      // right panel
+      glTexCoord2f(0.0, texEdge1); glVertex3f(+cellRad, +holeRad, z);
+      glTexCoord2f(texEdge1, texEdge1); glVertex3f(+holeRad, +holeRad, z);
+      glTexCoord2f(texEdge1, texEdge2); glVertex3f(+holeRad, -holeRad, z);
+      glTexCoord2f(0.0, texEdge2); glVertex3f(+cellRad, -holeRad, z);
+
+      // left panel
+      glTexCoord2f(texEdge2, texEdge1); glVertex3f(-holeRad, +holeRad, z);
+      glTexCoord2f(1.0, texEdge1); glVertex3f(-cellRad, +holeRad, z);
+      glTexCoord2f(1.0, texEdge2); glVertex3f(-cellRad, -holeRad, z);
+      glTexCoord2f(texEdge2, texEdge2); glVertex3f(-holeRad, -holeRad, z);
+
+      // bottom panel
+      glTexCoord2f(0.0, texEdge2); glVertex3f(+cellRad, -holeRad, z);
+      glTexCoord2f(1.0, texEdge2); glVertex3f(-cellRad, -holeRad, z);
+      glTexCoord2f(1.0, 1.0); glVertex3f(-cellRad, -cellRad, z);
+      glTexCoord2f(0.0, 1.0); glVertex3f(+cellRad, -cellRad, z);
+   }
+
+   //TODO ###: inner edges of facade. Here if quads.
+   // top edge
+   glNormal3f(0.0, -1.0, 0.0);
+   glTexCoord2f(texEdge1, texEdge1); glVertex3f(+holeRad, +holeRad, 0);
+   glTexCoord2f(texEdge2, texEdge1); glVertex3f(-holeRad, +holeRad, 0);
+   glTexCoord2f(texEdge2, texEdge1+th); glVertex3f(-holeRad, +holeRad, th);
+   glTexCoord2f(texEdge1, texEdge1+th); glVertex3f(+holeRad, +holeRad, th);
+
+   // bottom edge
+   glNormal3f(0.0, 1.0, 0.0);
+   glTexCoord2f(texEdge1, texEdge2); glVertex3f(+holeRad, -holeRad, 0);
+   glTexCoord2f(texEdge2, texEdge2); glVertex3f(-holeRad, -holeRad, 0);
+   glTexCoord2f(texEdge2, texEdge2-th); glVertex3f(-holeRad, -holeRad, th);
+   glTexCoord2f(texEdge1, texEdge2-th); glVertex3f(+holeRad, -holeRad, th);
+
+   // left edge
+   glNormal3f(1.0, 0.0, 0.0);
+   glTexCoord2f(texEdge2-0.001, texEdge1); glVertex3f(+holeRad, +holeRad, 0);
+   glTexCoord2f(texEdge2, texEdge1); glVertex3f(+holeRad, +holeRad, th);
+   glTexCoord2f(texEdge2, texEdge2); glVertex3f(+holeRad, -holeRad, th);
+   glTexCoord2f(texEdge2-0.001, texEdge2); glVertex3f(+holeRad, -holeRad, 0);
+
+   // right edge
+   glNormal3f(-1.0, 0.0, 0.0);
+   glTexCoord2f(texEdge1, texEdge1); glVertex3f(-holeRad, +holeRad, 0);
+   glTexCoord2f(texEdge1+0.001, texEdge1); glVertex3f(-holeRad, +holeRad, th);
+   glTexCoord2f(texEdge1+0.001, texEdge2); glVertex3f(-holeRad, -holeRad, th);
+   glTexCoord2f(texEdge1, texEdge2); glVertex3f(-holeRad, -holeRad, 0);
+
+   glEnd(); // GL_QUADS
+
+   //TODO ###: inner edges of facade. Here if cylinder.
+
+   glEndList(); // facadeDL
 }
 
 void setOrthographicProjection() {
@@ -620,15 +709,19 @@ void drawText()
 	static clock_t last_time = 0;
 
 	clock_t time_now = clock();
+        if (last_time == 0) last_time = time_now;
+
 	++frames;
 	// To update framerate more frequently, change CLOCKS_PER_SEC to e.g. (CLOCKS_PER_SEC / 2)
-	if(time_now - last_time > CLOCKS_PER_SEC) {
+	if(time_now - last_time > CLOCKS_PER_SEC / 2) {
 		// Calculate frames per second
 		// debugMsg("time_now: %d; last_time: %d; diff: %d; frames: %d\n", time_now, last_time, time_now - last_time, frames);
 		Cam.m_framerate = ((float)frames * CLOCKS_PER_SEC)/(time_now - last_time);
-		createTextDLs(fpsDLOuter, "FPS: %2.2f", Cam.m_framerate);
+                Cam.m_frametime = (time_now - last_time)/((float)frames * CLOCKS_PER_SEC);
                 if (Cam.m_framerate < Cam.m_minframerate) Cam.m_framerate = Cam.m_minframerate; // can't go too low or the following division will make things go wacky.
                 Cam.m_framerateAdjust = Cam.m_targetframerate / Cam.m_framerate;
+                // createTextDLs(fpsDLOuter, "FPS: %2.2f\nFRA: %2.2f", Cam.m_framerate, Cam.m_framerateAdjust);
+                createTextDLs(fpsDLOuter, "FPS: %2.2f", Cam.m_framerate);
 
                 last_time = time_now;
 		frames = 0;
@@ -691,7 +784,7 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
 	SetupWorld();
 
 	// Create display lists for help and fps
-	helpDLOuter = glGenLists(4);
+	helpDLOuter = glGenLists(5);
 	helpDLInner = helpDLOuter + 1;
 	fpsDLOuter = helpDLOuter + 2;
 	fpsDLInner = fpsDLOuter + 1;
@@ -699,6 +792,9 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
 	// Initialize the help display list. The FPS DL is created every time FPS is recalculated.
 	createTextDLs(helpDLOuter, helpText);
 	createTextDLs(fpsDLOuter, "FPS: unknown");
+
+        facadeDL = fpsDLInner + 1;
+        createFacadeDL(facadeDL);
 
 	return TRUE;										// Initialization Went OK
 }
@@ -715,10 +811,6 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 	
 	Cam.SetPerspective();
 
-	// apply friction:
-	Cam.m_ForwardVelocity *= friction;
-	Cam.m_SidewaysVelocity *= friction;
-
 	// reset white color (default)
 	glColor3f(1.0f, 1.0f, 1.0f);
 
@@ -727,7 +819,7 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 	// debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
 
 	// wall1 texture: xWalls
-	glBindTexture(GL_TEXTURE_2D, textures[wall1 * numFilters+filter]);
+	glBindTexture(GL_TEXTURE_2D, textures[wall1 * numFilters + filter]);
 
 #ifdef DEBUGGING
 	//// cylinders for z-axis identification
@@ -747,7 +839,7 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 					maze.xWalls[i][j][k].draw('x');	// draw xWall
 				}
 			}
-	glEnd();
+	glEnd(); // GL_QUADS
 
 	// wall2 panel texture: zWalls
 	glBindTexture(GL_TEXTURE_2D, textures[wall2 * numFilters+filter]);
@@ -1118,10 +1210,11 @@ int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 	MSG		msg;									// Windows Message Structure
 	BOOL	done=FALSE;								// Bool Variable To Exit Loop
 
+        fullscreen = FALSE;
 	//// Ask The User Which Screen Mode They Prefer
 	//if (MessageBox(NULL,"Would You Like To Run In Fullscreen Mode?", "Start FullScreen?",MB_YESNO|MB_ICONQUESTION)==IDNO)
 	//{
-		fullscreen=FALSE;							// Windowed Mode
+	//	fullscreen=FALSE;							// Windowed Mode
 	//}
 
 	// Create Our OpenGL Window

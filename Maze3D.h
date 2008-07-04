@@ -19,12 +19,16 @@ public:
 	// The maze will branch out as much as possible up to branchClustering branches; after that, the
 	// likelihood decreases. Suggested range 1-6.
 	int branchClustering;
-	// size of one cell in world coordinates. Some code may depend on cellSize = 1.0
+	// size of one cell in world coordinates. Some code might depend on cellSize = 1.0
 	const static float cellSize;
 	// margin around walls that we can't collide with; should be << cellSize.
 	const static float wallMargin;
 	static bool checkCollisions;
-	static float exitRot;
+        static bool hasEntered;
+        static bool hasExited;
+	static float exitRot; // used for rotating exit decorations
+        static float exitHoleRadius;
+        static float exitThickness;
 	/* The maze consists of both cells and walls. Each wall may be shared by two cells. */
 	Cell (*cells)[hMax][dMax];		// The maze's cells
 	CellCoord ccExit, ccEntrance;
