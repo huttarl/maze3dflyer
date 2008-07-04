@@ -26,8 +26,12 @@ glCamera::glCamera()
 	m_SidewaysVelocity		= 0.0f;
         m_targetframerate                     = 30.0f;
         m_framerate                           = m_targetframerate; // needs an initial value till we figure actual framerate
+        m_frametime = 1.0f / m_framerate;
         m_minframerate = 5.0f;
         m_framerateAdjust = 1.0f;
+        m_friction = 0.03f;
+        m_logFriction = log(m_friction); // log of friction
+
 }
 
 glCamera::~glCamera()
@@ -40,13 +44,31 @@ extern bool collide(glPoint &p, glVector &v);
 
 // To do: maybe pass in collide() as a parameter.
 // If so, also factor out movement from SetPerspective().
+void glCamera::ApplyFriction()
+{
+        // apply friction: (see http://www.gamedev.net/community/forums/topic.asp?topic_id=483396)
+        GLfloat oldFV = m_ForwardVelocity; // debugging
+        static int firstFew = 0; // debugging
+        firstFew++; //debugging
+        // pow(m_friction, m_frametime);
+        // exp(m_frametime * m_logFriction);
+        GLfloat frictionRoot = exp(m_frametime * m_logFriction);
+        m_ForwardVelocity *= frictionRoot;  // expf(-m_framerateAdjust) * m_friction;
+        if (m_ForwardVelocity < 0.003f && m_ForwardVelocity > -0.003f) m_ForwardVelocity = 0.0f;
+        m_SidewaysVelocity *= frictionRoot;
+        if (m_SidewaysVelocity < 0.003f && m_SidewaysVelocity > -0.003f) m_SidewaysVelocity = 0.0f;
+        if (firstFew < 100) //debugging
+           debugMsg("fps: %0.3f, froot: %0.3f; oldFV: %0.3f; new: %0.3f\n", m_framerate, frictionRoot, oldFV, m_ForwardVelocity);
+}
 
 void glCamera::SetPerspective()
 {
 	GLfloat Matrix[16];
 	glQuaternion q;
 	glVector rightVector;
-	unsigned char moving = (abs(m_SidewaysVelocity) + abs(m_ForwardVelocity) > 0.000001);
+	// bool moving = (abs(m_SidewaysVelocity) + abs(m_ForwardVelocity) > 0.000001);
+
+        ApplyFriction();
 
 	// Make the Quaternions that will represent our rotations
 	m_qPitch.CreateFromAxisAngle(1.0f, 0.0f, 0.0f, m_PitchDegrees);
@@ -92,6 +114,7 @@ void glCamera::SetPerspective()
 	glTranslatef(-m_Position.x, -m_Position.y, m_Position.z);
 
 	// glPrint("<%0.2f %0.2f %0.2f>", m_Position.x, m_Position.y, -m_Position.z);
+
 }
 
 void glCamera::ChangePitch(GLfloat degrees)

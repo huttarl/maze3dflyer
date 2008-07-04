@@ -11,7 +11,7 @@ void Autopilot::run() {
 	// currentMove == None means that the last executing move is finished; time to start the next one.
 	if (currentMove == None) {
 		currentMove = popMove();
-		// #todo: begin move
+		//TODO: begin move
 	} else {
 		// continue current move
 		switch(currentMove) {

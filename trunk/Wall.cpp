@@ -20,44 +20,51 @@ void Wall::draw(char dir) {
 }
 
 // Outside a glBegin/glEnd, draw a visual marker for the exit (or entrance) at this wall.
+// CellCoord x, y, z helps us know which way is in vs. out.
 void Wall::drawExit(int x, int y, int z, bool isEntrance) {
-	Vertex *qv = quad.vertices;
-	GLfloat cx = qv[0].x + Maze3D::cellSize * 0.5f,
-		cy = qv[0].y + Maze3D::cellSize * 0.5f,
-		cz = qv[0].z + Maze3D::cellSize * 0.5f; // center of disc
-	//if (firstTime)
-	//	debugMsg("drawExit(%d, %d, %d, %s): %f, %f, %f\n",
-	//		x, y, z, isEntrance ? "entrance" : "exit",
-	//		qv[0].x, qv[0].y, qv[0].z);
+   Vertex *qv = quad.vertices;
+   // center for rotating disc:
+   GLfloat cx = qv[0].x + Maze3D::cellSize * 0.5f,
+	    cy = qv[0].y + Maze3D::cellSize * 0.5f,
+	    cz = qv[0].z + Maze3D::cellSize * 0.5f; // center of disc
+   //if (firstTime)
+   //	debugMsg("drawExit(%d, %d, %d, %s): %f, %f, %f\n",
+   //		x, y, z, isEntrance ? "entrance" : "exit",
+   //		qv[0].x, qv[0].y, qv[0].z);
 
-	glPushMatrix();
+   glPushMatrix();
 
-	// rotate disc from z plane to x or y plane if nec.
-	if (qv[0].x == qv[2].x) { // exit wall is in X plane
-		cx = qv[0].x;
-		glTranslatef(cx, cy, cz);
-		glRotatef(90.0f, 0.0f, 1.0f, 0.0f); // rotate disc around y axis
-	} else if (qv[0].y == qv[2].y) { // exit wall is in Y plane
-		cy = qv[0].y;
-		glTranslatef(cx, cy, cz);
-		glRotatef(90.0f, 1.0f, 0.0f, 0.0f); // rotate disc around x axis
-	} else {
-		cz = qv[0].z;
-		glTranslatef(cx, cy, cz);
-	}
+   // rotate disc from z plane to x or y plane if nec.
+   if (qv[0].x == qv[2].x) { // exit wall is in X plane
+	    cx = qv[0].x;
+	    glTranslatef(cx, cy, cz);
+	    glRotatef(90.0f, 0.0f, 1.0f, 0.0f); // rotate disc around y axis
+   } else if (qv[0].y == qv[2].y) { // exit wall is in Y plane
+	    cy = qv[0].y;
+	    glTranslatef(cx, cy, cz);
+	    glRotatef(90.0f, 1.0f, 0.0f, 0.0f); // rotate disc around x axis
+   } else {
+	    cz = qv[0].z;
+	    glTranslatef(cx, cy, cz);
+   }
 
-	// no texture
-	glBindTexture(GL_TEXTURE_2D, GL_NONE);
-	// color: red or green
-	if (isEntrance) glColor3f(0.4f, 1.0f, 0.4f);
-	else glColor3f(1.0f, 0.4f, 0.4f);
+   // draw facade: first reset color, then call display list.
+   glColor3f(1.0f, 1.0f, 1.0f);
+   glCallList(facadeDL);
 
-	// spin polygon (disc)
-	maze.exitRot += 1.25f;
-	glRotatef(isEntrance ? maze.exitRot : -maze.exitRot, 0.0f, 0.0f, 1.0f);
+   // no texture
+   glBindTexture(GL_TEXTURE_2D, GL_NONE);
+   // color: red or green
+   if (isEntrance) glColor3f(0.4f, 1.0f, 0.4f);
+   else glColor3f(1.0f, 0.4f, 0.4f);
 
-	// gluDisk(quadric, innerRadius, outerRadius, slices, loops)
-	gluDisk(quadric, Maze3D::cellSize * 0.4f, Maze3D::cellSize * 0.5f, 5, 3);
 
-	glPopMatrix();
+   // spin polygon (disc)
+   maze.exitRot += 1.25f * Cam.m_framerateAdjust;
+   glRotatef(isEntrance ? maze.exitRot : -maze.exitRot, 0.0f, 0.0f, 1.0f);
+
+   // gluDisk(quadric, innerRadius, outerRadius, slices, loops)
+   gluDisk(quadric, Maze3D::exitHoleRadius * 0.8, Maze3D::exitHoleRadius, 7, 3);
+
+   glPopMatrix();
 }

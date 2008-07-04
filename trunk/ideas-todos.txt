@@ -1,10 +1,14 @@
  * To do:
+ - wall thickness:
+   - could fake it by putting a cap on the entrance and exit, since that's the only place you can see wall thickness.
+     Put on a double wall, with a little thickness, whose front (outside) is on the plane where the logical wall is,
+     with a portal in the middle. The portal could actually occupy most of the wall, with a narrow frame around the outside.
  *x release! use google code project hosting? what license? Artistic
    svn URL: https://maze3dflyer.googlecode.com/svn/trunk
    #x eliminate unnecessary files
    *x structure?
    *x move code to maze3dflyer and commit.
-   *- notify nehedev@gmail.com - they indicated a desire to post it on nehe.
+   *x notify nehedev@gmail.com - they indicated a desire to post it on nehe.
  - add code to set goal of navigating from entrance to exit, and time player
    - detect "entered" / "exited" state
      - if just inside entrance, then state := "entered".
