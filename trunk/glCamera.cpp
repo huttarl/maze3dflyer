@@ -287,6 +287,8 @@ void glCamera::SnapToGrid()
 	m_HeadingDegrees = ((int)((m_HeadingDegrees + ((m_HeadingDegrees < 0) ? -45.0f : 45.0f)) / 90.0f)) * 90.0f;
 	m_PitchDegrees = ((int)((m_PitchDegrees + ((m_PitchDegrees < 0) ? -45.0f : 45.0f)) / 90.0f)) * 90.0f;
 	debugMsg(" %f %f %f  / %f %f\n", m_Position.x, m_Position.y, m_Position.z, m_HeadingDegrees, m_PitchDegrees);
+        m_ForwardVelocity = 0.0;
+        m_SidewaysVelocity = 0.0;
 }
 
 void glCamera::GoTo(GLfloat nx, GLfloat ny, GLfloat nz, GLfloat npitch, GLfloat nheading)
@@ -296,4 +298,6 @@ void glCamera::GoTo(GLfloat nx, GLfloat ny, GLfloat nz, GLfloat npitch, GLfloat 
 	m_Position.z = nz; // -nz?
 	m_PitchDegrees = npitch; 
 	m_HeadingDegrees= nheading;	
+        m_ForwardVelocity = 0.0;
+        m_SidewaysVelocity = 0.0;
 }

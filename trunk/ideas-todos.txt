@@ -1,20 +1,25 @@
  * To do:
- - wall thickness:
-   - could fake it by putting a cap on the entrance and exit, since that's the only place you can see wall thickness.
+ - fix bug that lets you go thru walls when approaching a convex corner.
+ - display high scores (for each w/h/d/s combo?) 
+	 - save/load high scores to file
+ x* need to modify score (time) to be non-integral. Typical solve times are in single digits!
+ x wall thickness: it looks dumb that the walls are paper-thin.
+   x could fake it by putting a cap on the entrance and exit, since that's the only place you can see wall thickness.
      Put on a double wall, with a little thickness, whose front (outside) is on the plane where the logical wall is,
      with a portal in the middle. The portal could actually occupy most of the wall, with a narrow frame around the outside.
+     - would be fun to make the hole round instead of square.
  *x release! use google code project hosting? what license? Artistic
    svn URL: https://maze3dflyer.googlecode.com/svn/trunk
    #x eliminate unnecessary files
    *x structure?
    *x move code to maze3dflyer and commit.
    *x notify nehedev@gmail.com - they indicated a desire to post it on nehe.
- - add code to set goal of navigating from entrance to exit, and time player
-   - detect "entered" / "exited" state
-     - if just inside entrance, then state := "entered".
-     - if just outside exit and state == entered, then finished
-     - if just outside entrance or exit, state := exited
-   - how to know if player backed out??
+ x add code to set goal of navigating from entrance to exit, and time player
+   x detect "entered" / "exited" state
+     x if just inside entrance, then state := "entered".
+     x if just outside exit and state == entered, then finished
+     x if just outside entrance or exit, state := exited
+   x how to know if player backed out??
  - clean up code, including "borrowed" code
    x maybe factor some out, e.g. maze gen, display, each class into a .h
      x most of this is done.
@@ -111,9 +116,10 @@
 	   xq used to work; adjust for new entrance location
 	 x snap to maze grid (position and orientation)
 	   - animate by steps, not just snap
-   - smooth turning accel/decel
+   - smooth turning accel/decel - not so critical with mouse steering.
    x forward accel/decel
      x we have some of this now.
+   - it would be nice sometimes to have slower movement, e.g. with shift.
    * autopilot, following maze
      *- make move queue keep track of expected position (cellcoord)
      - requires solver

@@ -4,7 +4,15 @@
 
 void CellCoord::setCellState(Cell::CellState v) { maze.cells[x][y][z].state = v; }
 
-bool CellCoord::isCellPassage() { return maze.cells[x][y][z].state == Cell::passage; }
+bool CellCoord::isCellPassage(void) { return maze.cells[x][y][z].state == Cell::passage; }
+
+// isCellPassageSafe() checks bounds, unlike isCellPassage().
+bool CellCoord::isCellPassageSafe() { 
+   if (x < 0 || x > maze.w - 1 ||
+      y < 0 || y > maze.h - 1 ||
+      z < 0 || z > maze.d - 1) return false;
+   else return maze.cells[x][y][z].state == Cell::passage;
+}
 
 Cell::CellState CellCoord::getCellState() { return maze.cells[x][y][z].state; }
 

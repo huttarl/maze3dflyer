@@ -51,8 +51,9 @@ public:
 	void ChangePitch(GLfloat degrees);
         void ApplyFriction(void);
 	void SetPerspective(void);
-	void glCamera::SnapToGrid(void);
-	void glCamera::GoTo(GLfloat nx, GLfloat ny, GLfloat nz, GLfloat npitch, GLfloat nheading);
+	void SnapToGrid(void);
+	void GoTo(GLfloat nx, GLfloat ny, GLfloat nz, GLfloat npitch, GLfloat nheading);
+        bool IsInside(void);
 	glCamera();
 	virtual ~glCamera();
 
