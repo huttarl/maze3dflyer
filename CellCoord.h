@@ -12,7 +12,8 @@ public:
 	int x, y, z;
 	CellCoord(int a=0, int b=0, int c=0) { x = a, y = b, z = c; };
 	inline boolean operator ==(CellCoord &nc) { return (x == nc.x && y == nc.y && z == nc.z); }
-	bool isCellPassage();
+        bool isCellPassage(void);
+	bool isCellPassageSafe(void);
 	void setCellState(Cell::CellState v);
 	Cell::CellState getCellState();
 	void init(glPoint &p);

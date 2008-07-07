@@ -26,10 +26,10 @@
 #include <windows.h>
 #include <math.h>
 #include <stdio.h>
-#include <cstdlib> // FIXME: is this portable?
+#include <cstdlib> //FIXME: is this portable?
 // #include <time.h>
-#include <ctime> // FIXME: is this portable?
-#include <new> // FIXME: is this portable?
+#include <ctime> //FIXME: is this portable?
+#include <new> //FIXME: is this portable?
 #include <assert.h>
 
 #include <gl/gl.h>			// OpenGL header files
@@ -68,7 +68,7 @@ HGLRC		hRC=NULL;		// Permanent Rendering Context
 HWND		hWnd=NULL;		// Holds Our Window Handle
 HINSTANCE	hInstance;		// Holds The Instance Of The Application
 
-GLuint	helpDLInner, helpDLOuter, fpsDLInner, fpsDLOuter, facadeDL; // display list ID's
+GLuint	helpDLInner, helpDLOuter, fpsDLInner, fpsDLOuter, solvDLInner, solvDLOuter, facadeDL; // display list ID's
 
 const float piover180 = 0.0174532925f;
 int xRes = 1024;
@@ -112,7 +112,7 @@ GLuint filter = 2;				// Which filter to use
 const int numTextures = (roof - ground + 1);		// Max # textures (not counting filtering)
 GLuint	textures[numFilters * numTextures];		// Storage for texture indexes, with 3 filters each.
 
-//FIXME: read this from a text file at runtime?
+//TODO: read this from a text file at runtime?
 static char helpText[] = "Controls:\n\
 \n\
 Esc: exit\n\
@@ -131,6 +131,8 @@ T: toggle frames-per-second display\n\
 F: cycle texture filter mode\n\
 C: toggle collision checking (allow passing through walls or not)\n\
 F1: toggle full-screen mode";
+
+const int howLongShowSolved = 5; // for how many do we display "SOLVED"?
 
 
 void debugMsg(const char *str, ...)
@@ -561,9 +563,12 @@ GLvoid createTextDLs(GLuint DLOuter, const char *fmt, ...)
 	va_end(ap);											// Results Are Stored In Text
 
 	if (DLOuter == helpDLOuter)
-		x = 5, y = 30;
-	else
-		x = xRes - 100.0, y = yRes - 24.0; //TODO ###: could count lines in text and adjust y to yRes - 24.0 * lines.
+	    x = 5, y = 30;
+	else if (DLOuter == fpsDLOuter)
+	    x = xRes - 100, y = yRes - 24;
+               //TODO ###: could count lines and columns in text and adjust y to yRes - 24 * lines and x to xRes - 10 * columns.
+        else
+           x = 5, y = yRes - 24;
 
 	glNewList(DLInner, GL_COMPILE);
 	renderBitmapLines(x, y, GLUT_BITMAP_HELVETICA_18, 24, text);
@@ -602,6 +607,7 @@ GLvoid createFacadeDL(GLuint facadeDL)
    GLfloat holeRad = Maze3D::exitHoleRadius;
    GLfloat texEdge1 = 0.5 - (holeRad / Maze3D::cellSize), texEdge2 = 0.5 + (holeRad / Maze3D::cellSize);
    GLfloat th = Maze3D::exitThickness;
+   GLfloat ep = 0.0001; // epsilon
    GLuint i;
 
    // loop through two instances of this surface
@@ -638,7 +644,7 @@ GLvoid createFacadeDL(GLuint facadeDL)
       glTexCoord2f(0.0, 1.0); glVertex3f(+cellRad, -cellRad, z);
    }
 
-   //TODO ###: inner edges of facade. Here if quads.
+   // inner edges of facade. Here if quads.
    // top edge
    glNormal3f(0.0, -1.0, 0.0);
    glTexCoord2f(texEdge1, texEdge1); glVertex3f(+holeRad, +holeRad, 0);
@@ -655,17 +661,47 @@ GLvoid createFacadeDL(GLuint facadeDL)
 
    // left edge
    glNormal3f(1.0, 0.0, 0.0);
-   glTexCoord2f(texEdge2-0.001, texEdge1); glVertex3f(+holeRad, +holeRad, 0);
+   glTexCoord2f(texEdge2-0.02, texEdge1); glVertex3f(+holeRad, +holeRad, 0);
    glTexCoord2f(texEdge2, texEdge1); glVertex3f(+holeRad, +holeRad, th);
    glTexCoord2f(texEdge2, texEdge2); glVertex3f(+holeRad, -holeRad, th);
-   glTexCoord2f(texEdge2-0.001, texEdge2); glVertex3f(+holeRad, -holeRad, 0);
+   glTexCoord2f(texEdge2-0.02, texEdge2); glVertex3f(+holeRad, -holeRad, 0);
 
    // right edge
    glNormal3f(-1.0, 0.0, 0.0);
    glTexCoord2f(texEdge1, texEdge1); glVertex3f(-holeRad, +holeRad, 0);
-   glTexCoord2f(texEdge1+0.001, texEdge1); glVertex3f(-holeRad, +holeRad, th);
-   glTexCoord2f(texEdge1+0.001, texEdge2); glVertex3f(-holeRad, -holeRad, th);
+   glTexCoord2f(texEdge1+0.02, texEdge1); glVertex3f(-holeRad, +holeRad, th);
+   glTexCoord2f(texEdge1+0.02, texEdge2); glVertex3f(-holeRad, -holeRad, th);
    glTexCoord2f(texEdge1, texEdge2); glVertex3f(-holeRad, -holeRad, 0);
+
+   //TODO: outer edges of facade.
+   // top edge
+   glNormal3f(0.0, 1.0, 0.0);
+   glTexCoord2f(0.0, 0.0); glVertex3f(+cellRad, +cellRad - ep, 0);
+   glTexCoord2f(1.0, 0.0); glVertex3f(-cellRad, +cellRad - ep, 0);
+   glTexCoord2f(1.0, th); glVertex3f(-cellRad, +cellRad - ep, th);
+   glTexCoord2f(0.0, th); glVertex3f(+cellRad, +cellRad - ep, th);
+
+   // bottom edge
+   glNormal3f(0.0, -1.0, 0.0);
+   glTexCoord2f(0.0, th); glVertex3f(+cellRad, -cellRad + ep, 0);
+   glTexCoord2f(1.0, th); glVertex3f(-cellRad, -cellRad + ep, 0);
+   glTexCoord2f(1.0, 0.0); glVertex3f(-cellRad, -cellRad + ep, th);
+   glTexCoord2f(0.0, 0.0); glVertex3f(+cellRad, -cellRad + ep, th);
+
+   // left edge
+   glNormal3f(1.0, 0.0, 0.0);
+   glTexCoord2f(1.0-th, 0.0); glVertex3f(+cellRad - ep, +cellRad, 0);
+   glTexCoord2f(1.0, 0.0); glVertex3f(+cellRad - ep, +cellRad, th);
+   glTexCoord2f(1.0, 1.0); glVertex3f(+cellRad - ep, -cellRad, th);
+   glTexCoord2f(1.0-th, 1.0); glVertex3f(+cellRad - ep, -cellRad, 0);
+
+   // right edge
+   glNormal3f(1.0, 0.0, 0.0);
+   glTexCoord2f(0.0, 0.0); glVertex3f(-cellRad + ep, +cellRad, 0);
+   glTexCoord2f(th, 0.0); glVertex3f(-cellRad + ep, +cellRad, th);
+   glTexCoord2f(th, 1.0); glVertex3f(-cellRad + ep, -cellRad, th);
+   glTexCoord2f(0.0, 1.0); glVertex3f(-cellRad + ep, -cellRad, 0);
+
 
    glEnd(); // GL_QUADS
 
@@ -700,6 +736,12 @@ void resetPerspectiveProjection() {
 }
 
 
+void celebrateSolution() {
+   maze.whenSolved = clock();
+   maze.lastSolvedTime = maze.whenSolved - maze.whenEntered;
+}
+// see http://bytes.com/forum/post832171-3.html regarding CLOCKS_PER_SEC and clock_t type.
+
 // Draw any needed text.
 // Does not preserve any previous projection.
 void drawText()
@@ -707,13 +749,28 @@ void drawText()
 	// calculate framerate. Thanks to http://nehe.gamedev.net/data/articles/article.asp?article=17
 	static int frames = 0;
 	static clock_t last_time = 0;
+        static char solvingStatus[30];
+        int minutes = 0;
 
 	clock_t time_now = clock();
         if (last_time == 0) last_time = time_now;
 
+        if (maze.whenSolved && time_now - maze.whenSolved < howLongShowSolved * CLOCKS_PER_SEC) {
+           minutes = maze.lastSolvedTime / (CLOCKS_PER_SEC * 60);
+           sprintf(solvingStatus, "** SOLVED in %d:%02.2f ", minutes, (maze.lastSolvedTime + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC);
+        }
+        //else if (maze.hasFoundExit)
+        //   sprintf(solvingStatus, "Found exit");
+        else if (maze.whenEntered) {
+           minutes = (time_now - maze.whenEntered) / (CLOCKS_PER_SEC * 60);
+           sprintf(solvingStatus, "Solving: %d:%02.2f", minutes, (time_now - maze.whenEntered + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC);
+        }
+        else solvingStatus[0] = '\0';
+        createTextDLs(solvDLOuter, solvingStatus);
+
 	++frames;
-	// To update framerate more frequently, change CLOCKS_PER_SEC to e.g. (CLOCKS_PER_SEC / 2)
-	if(time_now - last_time > CLOCKS_PER_SEC / 2) {
+	// To update framerate more frequently, lower the right-hand side to e.g. (CLOCKS_PER_SEC / 2)
+	if(time_now - last_time > CLOCKS_PER_SEC / 8) {
 		// Calculate frames per second
 		// debugMsg("time_now: %d; last_time: %d; diff: %d; frames: %d\n", time_now, last_time, time_now - last_time, frames);
 		Cam.m_framerate = ((float)frames * CLOCKS_PER_SEC)/(time_now - last_time);
@@ -721,6 +778,7 @@ void drawText()
                 if (Cam.m_framerate < Cam.m_minframerate) Cam.m_framerate = Cam.m_minframerate; // can't go too low or the following division will make things go wacky.
                 Cam.m_framerateAdjust = Cam.m_targetframerate / Cam.m_framerate;
                 // createTextDLs(fpsDLOuter, "FPS: %2.2f\nFRA: %2.2f", Cam.m_framerate, Cam.m_framerateAdjust);
+                //TODO: make this reflect actual insideness
                 createTextDLs(fpsDLOuter, "FPS: %2.2f", Cam.m_framerate);
 
                 last_time = time_now;
@@ -737,10 +795,11 @@ void drawText()
 	// else
 	if (showHelp) glCallList(helpDLOuter); // createTextDLs(helpText);
 
+        glCallList(solvDLOuter);
+
 	glPopMatrix();
 	resetPerspectiveProjection();	
 }
-
 
 GLvoid ReSizeGLScene(GLsizei width, GLsizei height)		// Resize And Initialize The GL Window
 {
@@ -788,12 +847,15 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
 	helpDLInner = helpDLOuter + 1;
 	fpsDLOuter = helpDLOuter + 2;
 	fpsDLInner = fpsDLOuter + 1;
+        solvDLOuter = fpsDLOuter + 2;
+        solvDLInner = solvDLOuter + 1;
 
 	// Initialize the help display list. The FPS DL is created every time FPS is recalculated.
 	createTextDLs(helpDLOuter, helpText);
 	createTextDLs(fpsDLOuter, "FPS: unknown");
+        createTextDLs(solvDLOuter, "Solving: n");
 
-        facadeDL = fpsDLInner + 1;
+        facadeDL = solvDLInner + 1;
         createFacadeDL(facadeDL);
 
 	return TRUE;										// Initialization Went OK
@@ -1202,6 +1264,35 @@ void freeResources() {
 	delete [] maze.zWalls;
 }
 
+void handleArgs(int argc, LPWSTR *argv) {
+   int i;
+   int w=8, d=8, h=8, s=3, b=2;
+
+   // skip program names
+   for (i = 1; i < argc; i++) {
+      if (swscanf(argv[i], L"%dx%dx%d", &w, &h, &d) == 3) {
+         maze.w = w; maze.h = h; maze.d = d;
+         continue;
+      }
+      else if (argv[i][0] == '-') {
+         switch(argv[i][1]) {
+            case 'f':
+               fullscreen = TRUE;
+               continue;
+            //TODO: check for malformed args
+            case 's':
+               maze.sparsity = _wtoi(argv[++i]);
+               continue;
+            case 'b':
+               maze.branchClustering = _wtoi(argv[++i]);
+               continue;
+         }
+      }
+      debugMsg("Unrecognized command-line option: %s\n", argv[i]);
+   }
+
+}
+
 int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 					HINSTANCE	hPrevInstance,		// Previous Instance
 					LPSTR		lpCmdLine,			// Command Line Parameters
@@ -1211,6 +1302,13 @@ int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 	BOOL	done=FALSE;								// Bool Variable To Exit Loop
 
         fullscreen = FALSE;
+
+        LPWSTR *szArglist;
+        int nArgs;
+        szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
+
+        handleArgs(nArgs, szArglist);
+
 	//// Ask The User Which Screen Mode They Prefer
 	//if (MessageBox(NULL,"Would You Like To Run In Fullscreen Mode?", "Start FullScreen?",MB_YESNO|MB_ICONQUESTION)==IDNO)
 	//{
@@ -1553,6 +1651,21 @@ bool collide(glPoint &p, glVector &v)
 	
 	qcc.init(q);
 	ncc = qcc;
+
+        if (!qcc.isCellPassageSafe()) {
+           if (maze.hasFoundExit) {
+              maze.hasFoundExit = false;
+              celebrateSolution();
+           }
+           maze.whenEntered = 0;
+        }
+        else if (qcc == maze.ccEntrance) {
+           maze.whenEntered = clock();
+           maze.hasFoundExit = false;
+        }
+        else if (qcc == maze.ccExit && maze.whenEntered) {
+           maze.hasFoundExit = true; // solved maze!
+        }
 
 	// debugMsg("In collide(<%.2f %.2f %.2f>... ", q.x, q.y, q.z);
 

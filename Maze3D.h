@@ -1,6 +1,8 @@
 #ifndef __Maze3D_h__
 #define __Maze3D_h__
 
+#include <ctime> //FIXME: is this portable?
+
 #include "Cell.h"
 #include "CellCoord.h"
 #include "Wall.h"
@@ -24,8 +26,8 @@ public:
 	// margin around walls that we can't collide with; should be << cellSize.
 	const static float wallMargin;
 	static bool checkCollisions;
-        static bool hasEntered;
-        static bool hasExited;
+        static clock_t whenEntered, whenSolved, lastSolvedTime;
+        static bool hasFoundExit;
 	static float exitRot; // used for rotating exit decorations
         static float exitHoleRadius;
         static float exitThickness;
@@ -40,15 +42,11 @@ public:
 	// Pointers to the open "walls" at entrance and exit.
 	Wall *exitWall, *entranceWall;
 
-	Maze3D::Maze3D() {
-		w = 8, h = 8, d = 8;
-		sparsity = 3;
-		branchClustering = 2;
-		//cellSize = 1.0f;
-		//wallMargin = 0.11f;
-		checkCollisions = true;
-		exitRot = 0.0f;
-	}
+        // Maze3D::Maze3D();
+        Maze3D::Maze3D(int _w = 8, int _h = 8, int _d = 8, int _s = 3, int _b = 2);
+        void Maze3D::setDim(int _w = 8, int _h = 8, int _d = 8, int _s = 3, int _b = 2);
+
+        bool Maze3D::IsInside(glPoint position);
 };
 
 extern Maze3D maze;
