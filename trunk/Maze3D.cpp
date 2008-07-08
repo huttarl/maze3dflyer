@@ -10,7 +10,7 @@ float Maze3D::exitHoleRadius = 0.3f;
 float Maze3D::exitThickness = Maze3D::cellSize * 0.06;
 bool Maze3D::checkCollisions = true;
 clock_t Maze3D::whenEntered = (clock_t)0, Maze3D::whenSolved = (clock_t)0, Maze3D::lastSolvedTime = (clock_t)0;
-bool Maze3D::hasFoundExit = false;
+bool Maze3D::hasFoundExit = false, Maze3D::newBest = false;
 
 Maze3D::Maze3D(int _w, int _h, int _d, int _s, int _b) {
    w = _w, h = _h, d = _d;

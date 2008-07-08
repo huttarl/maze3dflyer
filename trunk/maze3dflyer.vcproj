@@ -139,6 +139,9 @@
 				RelativePath=".\glVector.cpp">
 			</File>
 			<File
+				RelativePath=".\HighScoreList.cpp">
+			</File>
+			<File
 				RelativePath=".\JPEG.cpp">
 			</File>
 			<File
@@ -178,6 +181,9 @@
 			</File>
 			<File
 				RelativePath=".\glVector.h">
+			</File>
+			<File
+				RelativePath=".\HighScoreList.h">
 			</File>
 			<File
 				RelativePath=".\JPEG.h">

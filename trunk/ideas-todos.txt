@@ -1,7 +1,29 @@
  * To do:
+ *- add better effect when you solve maze, e.g. flash screen
+ *- display high scores (for each w/h/d/s combo?) 
+     x data structure - dictionary? (w/h/d/s -> min time)
+	 x save high scores to file
+	 x load high scores
+	 x* test that it does
+	   x not save for new times that are larger than old time for same dims
+	   x save for new times that are smaller, for same dims
+	   x save for new times for new dims
+     -* display high score list
+     -* notify player when new HS
+ - big complex mazes will be more "legible" if there is a solid dark line along all outer edges
+   - maybe a grid, so there are lines even between cells? but not in open space
+   - how to draw so that it's visible, regardless of adjacent walls? make a 4-sided "diamond"-cross-section square prism around the line?
+     (with width = epsilon) Such a line would also be visible inside the maze.
+     - or this: iterate through edge segments;
+       - if current segment is external convex edge, draw external 3 sides of square prism;
+       - if current segment is external concave edge, draw external 1 side of square prism;
+       - otherwise, draw nothing (e.g. if current segment borders no walls, or two coplanar walls, or 4 walls)
+       - for this purpose, exit/entrance facade counts as a wall?
+   - it could be created once as a display list, since the maze never changes.
+ - ?display directional hint while you're solving maze:
+   - red arrow: direction to exit (crow-flies)
+   - green: dir to entrance
  - fix bug that lets you go thru walls when approaching a convex corner.
- - display high scores (for each w/h/d/s combo?) 
-	 - save/load high scores to file
  x* need to modify score (time) to be non-integral. Typical solve times are in single digits!
  x wall thickness: it looks dumb that the walls are paper-thin.
    x could fake it by putting a cap on the entrance and exit, since that's the only place you can see wall thickness.

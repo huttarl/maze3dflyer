@@ -44,6 +44,7 @@
 #include "Maze3D.h"
 #include "CellCoord.h"
 #include "Autopilot.h"
+#include "HighScoreList.h"
 #include "glCamera.h"
 #ifdef USE_JPG
 #   include "jpeg.h"
@@ -82,8 +83,8 @@ bool	active=TRUE;		// Window Active Flag Set To TRUE By Default
 bool	fullscreen=FALSE;	// Fullscreen Flag Set To Fullscreen Mode By Default
 bool	blend=FALSE;		// Blending ON/OFF
 bool	autopilotMode=TRUE;		// autopilotMode on?
-bool	mouseGrab=FALSE;		// mouse centering is on?
-bool	showFPS=TRUE;		// whether to display frames-per-second stat
+bool	mouseGrab=TRUE;		// mouse centering is on?
+bool	showFPS=FALSE;		// whether to display frames-per-second stat
 bool	showHelp=TRUE;		// show help text
 
 // these should probably move to glCamera or a subclass thereof.
@@ -96,6 +97,7 @@ UINT	MouseX, MouseY;		// Coordinates for the mouse
 UINT	CenterX, CenterY;	// Coordinates for the center of the screen.
 
 Maze3D maze;
+HighScoreList highScoreList;
 
 // distance from eye to near clipping plane. Should be about wallMargin/2.
 const float zNear = (Maze3D::wallMargin * 0.6f);
@@ -466,62 +468,62 @@ AUX_RGBImageRec *LoadBMP(char *Filename)                // Loads A Bitmap Image
 // Load an image from a file, and create textures from it using multiple filters.
 // Return True if load succeeded.
 bool loadTexture(int i, char *filepath) {
-	bool status = TRUE;
-	if(!filepath) return FALSE;
+   bool status = TRUE;
+   if(!filepath) return FALSE;
 
 #ifdef USE_JPG
-	tImageJPG *pBitMap = Load_JPEG(filepath);
+   tImageJPG *pBitMap = Load_JPEG(filepath);
 #   define bitmap pBitMap
 #else
-    AUX_RGBImageRec *TextureImage[1];               // Create Storage Space For The Texture
-	TextureImage[0] = LoadBMP(filepath);
+   AUX_RGBImageRec *TextureImage[1];               // Create Storage Space For The Texture
+   TextureImage[0] = LoadBMP(filepath);
 #   define bitmap (TextureImage[0])
 #endif
 
-	if(!bitmap || !bitmap->data) return FALSE;
+   if(!bitmap || !bitmap->data) return FALSE;
 
-    glGenTextures(numFilters, &textures[numFilters*i]);          // Create 3 filtered textures
+   glGenTextures(numFilters, &textures[numFilters*i]);          // Create 3 filtered textures
 
-	// Create Nearest Filtered Texture
-	debugMsg("Binding texture %s at %d\n", filepath, numFilters*i + 0);
-	glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 0]);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, bitmap->sizeX, bitmap->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
+   // Create Nearest Filtered Texture
+   //debugMsg("Binding texture %s at %d\n", filepath, numFilters*i + 0);
+   glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 0]);
+   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+   glTexImage2D(GL_TEXTURE_2D, 0, 3, bitmap->sizeX, bitmap->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
 
-    // Create Linear Filtered Texture
-	debugMsg("Binding texture %s at %d\n", filepath, numFilters*i + 1);
-    glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 1]);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, bitmap->sizeX, bitmap->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
+   // Create Linear Filtered Texture
+   //debugMsg("Binding texture %s at %d\n", filepath, numFilters*i + 1);
+   glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 1]);
+   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+   glTexImage2D(GL_TEXTURE_2D, 0, 3, bitmap->sizeX, bitmap->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
 
-	// Create MipMapped Texture
-	debugMsg("Binding texture %s at %d\n", filepath, numFilters*i + 2);
-	glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 2]);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST);
-	gluBuild2DMipmaps(GL_TEXTURE_2D, 3, bitmap->sizeX, bitmap->sizeY, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
+   // Create MipMapped Texture
+   //debugMsg("Binding texture %s at %d\n", filepath, numFilters*i + 2);
+   glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 2]);
+   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST);
+   gluBuild2DMipmaps(GL_TEXTURE_2D, 3, bitmap->sizeX, bitmap->sizeY, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
 
-	free(bitmap->data);			
-	free(bitmap);
-	return status;
+   free(bitmap->data);			
+   free(bitmap);
+   return status;
 }
 
 bool LoadGLTextures()                                    // Load images and convert to textures
 {
-        bool status=FALSE;                               // status Indicator
-        // load the image, check for errors; if it's not found, quit.
+   bool status=FALSE;                               // status Indicator
+   // load the image, check for errors; if it's not found, quit.
 
 #ifdef USE_JPG
-		status = loadTexture(wall1, "Data/brickWall_tileable.jpg") && loadTexture(ground, "Data/carpet-6716-2x2mir.jpg")
-			&& loadTexture(wall2, "Data/rocky.jpg") && loadTexture(roof, "Data/roof1.jpg") && loadTexture(portal, "Data/wood-planks-4227.jpg");
+   status = loadTexture(wall1, "Data/brickWall_tileable.jpg") && loadTexture(ground, "Data/carpet-6716-2x2mir.jpg")
+      && loadTexture(wall2, "Data/rocky.jpg") && loadTexture(roof, "Data/roof1.jpg") && loadTexture(portal, "Data/wood-planks-4227.jpg");
 #else
-		status = loadTexture(wall1, "Data/brickWall_tileable.bmp") && loadTexture(ground, "Data/carpet-6716-2x2mir.bmp")
-			&& loadTexture(wall2, "Data/rocky.bmp") && loadTexture(roof, "Data/roof1.bmp") && loadTexture(portal, "Data/wood-planks-4227.bmp");
+   status = loadTexture(wall1, "Data/brickWall_tileable.bmp") && loadTexture(ground, "Data/carpet-6716-2x2mir.bmp")
+      && loadTexture(wall2, "Data/rocky.bmp") && loadTexture(roof, "Data/roof1.bmp") && loadTexture(portal, "Data/wood-planks-4227.bmp");
 #endif
-		debugMsg("Texture load status: %d\n", status);
-        return status;                                  // Return The Status
+   //debugMsg("Texture load status: %d\n", status);
+   return status;                                  // Return The Status
 }
 
 void renderBitmapLines(float x, float y, void *font, float lineSpacing, char *str)
@@ -739,6 +741,12 @@ void resetPerspectiveProjection() {
 void celebrateSolution() {
    maze.whenSolved = clock();
    maze.lastSolvedTime = maze.whenSolved - maze.whenEntered;
+   if (highScoreList.addScore(maze)) {
+      // if this is a new high score (low time), save the high score list.
+      highScoreList.save();
+      maze.newBest = true;
+   }
+   else maze.newBest = false;
 }
 // see http://bytes.com/forum/post832171-3.html regarding CLOCKS_PER_SEC and clock_t type.
 
@@ -749,7 +757,7 @@ void drawText()
 	// calculate framerate. Thanks to http://nehe.gamedev.net/data/articles/article.asp?article=17
 	static int frames = 0;
 	static clock_t last_time = 0;
-        static char solvingStatus[30];
+        static char solvingStatus[50];
         int minutes = 0;
 
 	clock_t time_now = clock();
@@ -757,7 +765,9 @@ void drawText()
 
         if (maze.whenSolved && time_now - maze.whenSolved < howLongShowSolved * CLOCKS_PER_SEC) {
            minutes = maze.lastSolvedTime / (CLOCKS_PER_SEC * 60);
-           sprintf(solvingStatus, "** SOLVED in %d:%02.2f ", minutes, (maze.lastSolvedTime + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC);
+           sprintf(solvingStatus, "SOLVED in %d:%02.2f %s", minutes,
+              (maze.lastSolvedTime + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC,
+              maze.newBest ? " ** New best time! **" : "");
         }
         //else if (maze.hasFoundExit)
         //   sprintf(solvingStatus, "Found exit");
@@ -1314,6 +1324,8 @@ int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 	//{
 	//	fullscreen=FALSE;							// Windowed Mode
 	//}
+
+        (void)highScoreList.load();
 
 	// Create Our OpenGL Window
 	if (!CreateGLWindow(title, xRes, yRes, 16, fullscreen))
