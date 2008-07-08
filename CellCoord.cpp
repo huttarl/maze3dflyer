@@ -164,27 +164,27 @@ void CellCoord::standOutside(Wall *w) {
 	GLfloat heading = 0.0f, pitch = 0.0f;
 	Vertex *qv = w->quad.vertices;
 
-	debugMsg("standOutside: cc(%d, %d, %d), w(%2.2f,%2.2f,%2.2f / %2.2f,%2.2f,%2.2f): ",
-		x, y, z, qv[0].x, qv[0].y, qv[0].z, qv[2].x, qv[2].y, qv[2].z);
+	//debugMsg("standOutside: cc(%d, %d, %d), w(%2.2f,%2.2f,%2.2f / %2.2f,%2.2f,%2.2f): ",
+	//	x, y, z, qv[0].x, qv[0].y, qv[0].z, qv[2].x, qv[2].y, qv[2].z);
 	if (qv[0].x == qv[2].x) { // If wall is in X plane
-		debugMsg("x plane;\n");
+		//debugMsg("x plane;\n");
 		heading = qv[0].x > cx ? -90.0f : 90.0f;
 		// pitch = 0;
 		cx += (qv[0].x - cx) * 2;
 	} else if (qv[0].y == qv[2].y) { // If wall is in Y plane
-		debugMsg("y plane;\n");
+		//debugMsg("y plane;\n");
 		pitch = qv[0].y > cy ? Cam.m_MaxPitch : -Cam.m_MaxPitch;
 		// heading = 0;
 		cy += (qv[0].y - cy) * 2;
 	} else if (qv[0].z == qv[2].z) { // If wall is in z plane
-		debugMsg("z plane;\n");
+		//debugMsg("z plane;\n");
 		heading = qv[0].z > cz ? 0.0f : 180.0f;
 		// pitch = 0;
 		cz += (qv[0].z - cz) * 2;
 	}
 
-	debugMsg("  GoTo(%2.2f,%2.2f,%2.2f, p %2.2f, h %2.2f)\n",
-		cx, cy, cz, pitch, heading);
+	//debugMsg("  GoTo(%2.2f,%2.2f,%2.2f, p %2.2f, h %2.2f)\n",
+	//	cx, cy, cz, pitch, heading);
 	Cam.GoTo(cx, cy, -cz, pitch, heading);
 	Cam.AccelForward(-keyAccelRate*2);
 }
