@@ -27,7 +27,7 @@ public:
 	const static float wallMargin;
 	static bool checkCollisions;
         static clock_t whenEntered, whenSolved, lastSolvedTime;
-        static bool hasFoundExit;
+        static bool hasFoundExit, newBest;
 	static float exitRot; // used for rotating exit decorations
         static float exitHoleRadius;
         static float exitThickness;
