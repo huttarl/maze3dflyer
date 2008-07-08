@@ -47,9 +47,9 @@ extern bool collide(glPoint &p, glVector &v);
 void glCamera::ApplyFriction()
 {
         // apply friction: (see http://www.gamedev.net/community/forums/topic.asp?topic_id=483396)
-        GLfloat oldFV = m_ForwardVelocity; // debugging
-        static int firstFew = 0; // debugging
-        firstFew++; //debugging
+        //GLfloat oldFV = m_ForwardVelocity; // debugging
+        //static int firstFew = 0; // debugging
+        //firstFew++; //debugging
         // pow(m_friction, m_frametime);
         // exp(m_frametime * m_logFriction);
         GLfloat frictionRoot = exp(m_frametime * m_logFriction);
@@ -57,8 +57,8 @@ void glCamera::ApplyFriction()
         if (m_ForwardVelocity < 0.003f && m_ForwardVelocity > -0.003f) m_ForwardVelocity = 0.0f;
         m_SidewaysVelocity *= frictionRoot;
         if (m_SidewaysVelocity < 0.003f && m_SidewaysVelocity > -0.003f) m_SidewaysVelocity = 0.0f;
-        if (firstFew < 100) //debugging
-           debugMsg("fps: %0.3f, froot: %0.3f; oldFV: %0.3f; new: %0.3f\n", m_framerate, frictionRoot, oldFV, m_ForwardVelocity);
+        //if (firstFew < 100) //debugging
+        //   debugMsg("fps: %0.3f, froot: %0.3f; oldFV: %0.3f; new: %0.3f\n", m_framerate, frictionRoot, oldFV, m_ForwardVelocity);
 }
 
 void glCamera::SetPerspective()
