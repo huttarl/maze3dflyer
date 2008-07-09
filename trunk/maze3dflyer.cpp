@@ -111,7 +111,7 @@ GLUquadricObj *quadric;
 
 const int numFilters = 3;		// How many filters for each texture
 GLuint filter = 2;				// Which filter to use
-const int numTextures = (roof - ground + 1);		// Max # textures (not counting filtering)
+const int numTextures = (sky - ground + 1);		// Max # textures (not counting filtering)
 GLuint	textures[numFilters * numTextures];		// Storage for texture indexes, with 3 filters each.
 
 //TODO: read this from a text file at runtime?
@@ -446,7 +446,6 @@ void SetupWorld()
 	return;
 }
 
-// To do: transfer those photos I took from the camera (walls, roof, ground/floor)
 AUX_RGBImageRec *LoadBMP(char *Filename)                // Loads A Bitmap Image
 {
         FILE *File=NULL;                                // File Handle
@@ -511,6 +510,18 @@ bool loadTexture(int i, char *filepath) {
    return status;
 }
 
+bool loadSkyTextures() {
+   //TODO: unhardcode path
+   //static char skyTexDir = "c:/Program Files/Stellarium/landscapes/garching";
+   //static char path[1024];
+   //TODO: read filenames from .ini file if stellarium landscape
+#ifdef USE_JPG
+   return loadTexture(sky, "Data/blue-sky.jpg");
+#else
+   return loadTexture(sky, "Data/blue-sky.bmp");
+#endif // USE_JPG
+}
+
 bool LoadGLTextures()                                    // Load images and convert to textures
 {
    bool status=FALSE;                               // status Indicator
@@ -523,6 +534,7 @@ bool LoadGLTextures()                                    // Load images and conv
    status = loadTexture(wall1, "Data/brickWall_tileable.bmp") && loadTexture(ground, "Data/carpet-6716-2x2mir.bmp")
       && loadTexture(wall2, "Data/rocky.bmp") && loadTexture(roof, "Data/roof1.bmp") && loadTexture(portal, "Data/wood-planks-4227.bmp");
 #endif
+   status = status && loadSkyTextures();
    //debugMsg("Texture load status: %d\n", status);
    return status;                                  // Return The Status
 }
@@ -924,6 +936,89 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
 	return TRUE;										// Initialization Went OK
 }
 
+// draw the sky box. Thanks to:
+//  http://sidvind.com/wiki/Skybox_tutorial, http://gpwiki.org/index.php/Sky_Box
+void drawSkyBox(void) {
+    // Reset and transform the matrix.
+    //glLoadIdentity();
+    //gluLookAt(
+    //    0,0,0,
+    //    Cam.m_Position.x, Cam.m_Position.y, -Cam.m_Position.z,
+    //    0,1,0);
+
+    glPushMatrix();
+    glTranslatef(Cam.m_Position.x, Cam.m_Position.y, -Cam.m_Position.z);
+
+    // Enable/Disable features
+    glPushAttrib(GL_ENABLE_BIT);
+    glEnable(GL_TEXTURE_2D);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_BLEND);
+
+    // Just in case we set all vertices to white.
+    glColor4f(1,1,1,1);
+
+    // Render the front quad
+    glBindTexture(GL_TEXTURE_2D, textures[sky * numFilters + filter]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
+        glTexCoord2f(1, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
+        glTexCoord2f(1, 1); glVertex3f( -0.5f,  0.5f, -0.5f );
+        glTexCoord2f(0, 1); glVertex3f(  0.5f,  0.5f, -0.5f );
+    glEnd();
+
+    // Render the left quad
+    //TODO: use different textures
+    glBindTexture(GL_TEXTURE_2D, textures[sky * numFilters + filter]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f(  0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
+        glTexCoord2f(1, 1); glVertex3f(  0.5f,  0.5f, -0.5f );
+        glTexCoord2f(0, 1); glVertex3f(  0.5f,  0.5f,  0.5f );
+    glEnd();
+
+    // Render the back quad
+    glBindTexture(GL_TEXTURE_2D, textures[sky * numFilters + filter]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 1); glVertex3f(  0.5f,  0.5f,  0.5f );
+        glTexCoord2f(0, 1); glVertex3f( -0.5f,  0.5f,  0.5f );
+    glEnd();
+
+    // Render the right quad
+    glBindTexture(GL_TEXTURE_2D, textures[sky * numFilters + filter]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
+        glTexCoord2f(1, 0); glVertex3f( -0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 1); glVertex3f( -0.5f,  0.5f,  0.5f );
+        glTexCoord2f(0, 1); glVertex3f( -0.5f,  0.5f, -0.5f );
+    glEnd();
+
+    // Render the top quad
+    glBindTexture(GL_TEXTURE_2D, textures[sky * numFilters + filter]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 1); glVertex3f( -0.5f,  0.5f, -0.5f );
+        glTexCoord2f(0, 0); glVertex3f( -0.5f,  0.5f,  0.5f );
+        glTexCoord2f(1, 0); glVertex3f(  0.5f,  0.5f,  0.5f );
+        glTexCoord2f(1, 1); glVertex3f(  0.5f,  0.5f, -0.5f );
+    glEnd();
+
+    // Render the bottom quad
+    glBindTexture(GL_TEXTURE_2D, textures[sky * numFilters + filter]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
+        glTexCoord2f(0, 1); glVertex3f( -0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 1); glVertex3f(  0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
+    glEnd();
+
+    // Restore enable bits and matrix
+    glPopAttrib();
+    glPopMatrix();
+}
+
 int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 {
 	if (blend) {			// do polygon anti-aliasing, a la http://glprogramming.com/red/chapter06.html#name2
@@ -932,12 +1027,13 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear The Screen And The Depth Buffer
 	}
 
-	glLoadIdentity();									// Reset The View matrix
-	
-	Cam.SetPerspective();
+        glLoadIdentity(); // Reset The View matrix
 
+	Cam.SetPerspective(); // actually applies camera movement, acceleration, collision, etc. and sets matrix
 	// reset white color (default)
 	glColor3f(1.0f, 1.0f, 1.0f);
+
+        drawSkyBox();
 
 	//if (firstTime) debugMsg("beginning walls loop\n");
 

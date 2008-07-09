@@ -19,7 +19,7 @@ extern GLuint filter;				// Which filter to use
 extern GLuint textures[]; // texture indexes ("names")
 extern GLuint facadeDL; // needed by Wall.cpp
 
-typedef enum { ground, wall1, wall2, portal, roof } Material;
+typedef enum { ground, wall1, wall2, portal, roof, sky } Material;
 
 extern GLUquadricObj *quadric;	
 
