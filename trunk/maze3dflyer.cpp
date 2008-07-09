@@ -69,7 +69,7 @@ HGLRC		hRC=NULL;		// Permanent Rendering Context
 HWND		hWnd=NULL;		// Holds Our Window Handle
 HINSTANCE	hInstance;		// Holds The Instance Of The Application
 
-GLuint	helpDLInner, helpDLOuter, fpsDLInner, fpsDLOuter, solvDLInner, solvDLOuter, facadeDL; // display list ID's
+GLuint	helpDLInner, helpDLOuter, fpsDLInner, fpsDLOuter, timeDLInner, timeDLOuter, scoreListDL, facadeDL; // display list ID's
 
 const float piover180 = 0.0174532925f;
 int xRes = 1024;
@@ -84,7 +84,7 @@ bool	fullscreen=FALSE;	// Fullscreen Flag Set To Fullscreen Mode By Default
 bool	blend=FALSE;		// Blending ON/OFF
 bool	autopilotMode=TRUE;		// autopilotMode on?
 bool	mouseGrab=TRUE;		// mouse centering is on?
-bool	showFPS=FALSE;		// whether to display frames-per-second stat
+bool	showFPS=FALSE, showScores=FALSE; // whether to display framerate or score list
 bool	showHelp=TRUE;		// show help text
 
 // these should probably move to glCamera or a subclass thereof.
@@ -130,6 +130,7 @@ Space: snap camera position/orientation to grid\n\
 \n\
 M or left-click: toggle mouse grab\n\
 T: toggle frames-per-second display\n\
+L: toggle display of best score list (arrow shows current maze config)\n\
 F: cycle texture filter mode\n\
 C: toggle collision checking (allow passing through walls or not)\n\
 F1: toggle full-screen mode";
@@ -526,69 +527,122 @@ bool LoadGLTextures()                                    // Load images and conv
    return status;                                  // Return The Status
 }
 
-void renderBitmapLines(float x, float y, void *font, float lineSpacing, char *str)
+// Render string at given location with given font and line spacing.
+// Returns width and height of text rendered, via *w and *h.
+void renderBitmapLines(float x, float y, void *font, float lineSpacing, char *str, float *w, float *h)
 {
-	while (*str) {
-		// position to beginning of line
-		glRasterPos2f(x, y);
-		while (*str && *str != '\n')
-			glutBitmapCharacter(font, *str++);
-		if (*str == '\n') {
-			y += lineSpacing;
-			str++;
-		}
-	}
+   float ix = x, iy = y;
+   int lines = 0;
+   char *istr = str; // debugging
+
+   *w = *h = 0.0;
+   if (!*str) return;
+   while (*str) {
+      // position to beginning of line
+      glRasterPos2f(ix, y);
+      x = ix;
+      while (*str && *str != '\n') {
+	 glutBitmapCharacter(font, *str);
+         x += glutBitmapWidth(font, *str++);
+      }
+      if (x - ix > *w) *w = x - ix;
+      if (*str == '\n') {
+	 y += lineSpacing;
+         lines++;
+	 str++;
+      }
+      //debugMsg("rendered line: ix,iy = %.1f,%.1f; x,y = %.1f,%.1f\n",
+      //   ix, iy, x, y);
+   }
+   *h = y - iy;
+
+   // If last line didn't end with a CR, still count it as a line.
+   if (str[-1] != '\n')
+      *h += lineSpacing;
+
+   //debugMsg("renderBitmapLines: '%c%c%c' %.1fx%.1f\n", istr[0], istr[1], istr[2],
+   //   *w, *h);
 }
 
 // Create display lists to show text on HUD.
 // Changes current color.
 // Creates a DL at DLOuter, and an inner DL at DLOuter + 1. 
 // If those DLs exist already, they will be replaced.
-GLvoid createTextDLs(GLuint DLOuter, const char *fmt, ...)
+GLvoid createTextDLs(GLuint DL, bool variableSpaced, const char *fmt, ...)
 {
-	GLuint DLInner = DLOuter + 1;						// nested display list
-	char		text[1024];								// Holds Our String
-	float x, y;
-	va_list		ap;										// Pointer To List Of Arguments
+   char text[1024];								// Holds Our String
+   float x, y, w, h;
+   const int lineHeight = 24;
+   va_list		ap;										// Pointer To List Of Arguments
+      
+   if (fmt == NULL)		// If There's No Text
+      return;											// Do Nothing
 
-	if (fmt == NULL)		// If There's No Text
-		return;											// Do Nothing
+   if (strlen(fmt) > sizeof(text)) {					// obvious buffer overrun
+      errorMsg("Error: oversized fmt string exceeds createTextDLs buffer[%d]: '%s'\n",
+	    sizeof(text), fmt);
+      return;
+   }
 
-	if (strlen(fmt) > sizeof(text)) {					// obvious buffer overrun
-		errorMsg("Error: oversized fmt string exceeds createTextDLs buffer[%d]: '%s'\n",
-			sizeof(text), fmt);
-		return;
-	}
+   va_start(ap, fmt);									// Parses The String For Variables
+   vsprintf(text, fmt, ap);							// And Converts Symbols To Actual Numbers
+   va_end(ap);											// Results Are Stored In Text
 
-	va_start(ap, fmt);									// Parses The String For Variables
-	vsprintf(text, fmt, ap);							// And Converts Symbols To Actual Numbers
-	va_end(ap);											// Results Are Stored In Text
+   if (DL == helpDLOuter)
+      x = 5, y = lineHeight;
+   else if (DL == fpsDLOuter)
+      x = xRes - 100, y = yRes - lineHeight/2 + 2;
+         //TODO ###: could count lines and columns in text and adjust y to yRes - lineHeight * lines and x to xRes - 10 * columns.
+   else if (DL == timeDLOuter)
+      x = 5, y = yRes - lineHeight/2 + 2;
+   else if (DL == scoreListDL)
+      x = xRes - 9*31 + 20, y = lineHeight; // was x = xRes / 2 - 9*14 + 10, y = yRes / 4;
+   else x=0, y=0; // default, unused
 
-	if (DLOuter == helpDLOuter)
-	    x = 5, y = 30;
-	else if (DLOuter == fpsDLOuter)
-	    x = xRes - 100, y = yRes - 24;
-               //TODO ###: could count lines and columns in text and adjust y to yRes - 24 * lines and x to xRes - 10 * columns.
-        else
-           x = 5, y = yRes - 24;
+   glNewList(DL, GL_COMPILE);
+   if (*text) {
+      glColor3f(1.0f, 0.9f, 0.7f);
+      if (variableSpaced)
+         renderBitmapLines(x, y, GLUT_BITMAP_HELVETICA_18, lineHeight, text, &w, &h);
+      else {
+         renderBitmapLines(x, y, GLUT_BITMAP_9_BY_15, lineHeight, text, &w, &h); // need monospace font for right-justifying scores
+      }
 
-	glNewList(DLInner, GL_COMPILE);
-	renderBitmapLines(x, y, GLUT_BITMAP_HELVETICA_18, 24, text);
-	glEndList(); // DLInner
+      // background rectangle
+      // Do we need to go slightly backwards in z first? It seems to work without that...
+      x -= 10;
+      y -= lineHeight;
+      // enable blending to simulate transparency
+      glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      glColor4f(0.25,0.25,0.25,0.75);
+      glBegin (GL_QUADS);
+      glVertex2f(x, y);
+      glVertex2f(x + w + 20, y );
+      glVertex2f(x + w + 20, y + h + 10);
+      glVertex2f(x, y + h + 10);
+      glEnd ();
+      glDisable(GL_BLEND);
+   }
 
-	glNewList(DLOuter, GL_COMPILE);
-	// use HL orange. :-)
-	glColor3f(1.0f, 0.9f, 0.7f);
-	glCallList(DLInner);
-	// The following takes a long time when displaying help, but it makes
-	// the text much more legible; and who cares about frame rate while
-	// we're displaying help?
-	glColor3f(0, 0, 0); // black shadow
-	glTranslatef(1,1,0);  glCallList(DLInner);
-	glTranslatef(-2,0,0); glCallList(DLInner);
-	glTranslatef(0,-2,0); glCallList(DLInner);
-	glTranslatef(2,0,0);  glCallList(DLInner);
-	glEndList(); // DLOuter
+   glEndList(); // DL
+
+   /*
+   if (withOutline) {
+      glNewList(DLOuter, GL_COMPILE);
+      // use HL orange. :-)
+      glColor3f(1.0f, 0.9f, 0.7f);
+      glCallList(DLInner);
+      // The following takes a long time when displaying help, but it makes
+      // the text much more legible; and who cares about frame rate while
+      // we're displaying help?
+      glColor3f(0, 0, 0); // black shadow
+      glTranslatef(1,1,0);  glCallList(DLInner);
+      glTranslatef(-2,0,0); glCallList(DLInner);
+      glTranslatef(0,-2,0); glCallList(DLInner);
+      glTranslatef(2,0,0);  glCallList(DLInner);
+      glEndList(); // DLOuter
+   }
+   */
 }
 
 // Create display lists to draw exit/entrance facade.
@@ -675,7 +729,6 @@ GLvoid createFacadeDL(GLuint facadeDL)
    glTexCoord2f(texEdge1+0.02, texEdge2); glVertex3f(-holeRad, -holeRad, th);
    glTexCoord2f(texEdge1, texEdge2); glVertex3f(-holeRad, -holeRad, 0);
 
-   //TODO: outer edges of facade.
    // top edge
    glNormal3f(0.0, 1.0, 0.0);
    glTexCoord2f(0.0, 0.0); glVertex3f(+cellRad, +cellRad - ep, 0);
@@ -707,7 +760,7 @@ GLvoid createFacadeDL(GLuint facadeDL)
 
    glEnd(); // GL_QUADS
 
-   //TODO ###: inner edges of facade. Here if cylinder.
+   // inner edges of facade: put here if cylinder.
 
    glEndList(); // facadeDL
 }
@@ -763,9 +816,9 @@ void drawText()
 	clock_t time_now = clock();
         if (last_time == 0) last_time = time_now;
 
-        if (maze.whenSolved && time_now - maze.whenSolved < howLongShowSolved * CLOCKS_PER_SEC) {
+        if (maze.whenSolved && (time_now - maze.whenSolved < howLongShowSolved * CLOCKS_PER_SEC)) {
            minutes = maze.lastSolvedTime / (CLOCKS_PER_SEC * 60);
-           sprintf(solvingStatus, "SOLVED in %d:%02.2f %s", minutes,
+           sprintf(solvingStatus, "SOLVED in %d:%05.2f %s", minutes,
               (maze.lastSolvedTime + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC,
               maze.newBest ? " ** New best time! **" : "");
         }
@@ -773,10 +826,11 @@ void drawText()
         //   sprintf(solvingStatus, "Found exit");
         else if (maze.whenEntered) {
            minutes = (time_now - maze.whenEntered) / (CLOCKS_PER_SEC * 60);
-           sprintf(solvingStatus, "Solving: %d:%02.2f", minutes, (time_now - maze.whenEntered + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC);
+           sprintf(solvingStatus, "Solving: %d:%05.2f", minutes,
+              (time_now - maze.whenEntered + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC);
         }
         else solvingStatus[0] = '\0';
-        createTextDLs(solvDLOuter, solvingStatus);
+        createTextDLs(timeDLOuter, true, solvingStatus);
 
 	++frames;
 	// To update framerate more frequently, lower the right-hand side to e.g. (CLOCKS_PER_SEC / 2)
@@ -788,8 +842,7 @@ void drawText()
                 if (Cam.m_framerate < Cam.m_minframerate) Cam.m_framerate = Cam.m_minframerate; // can't go too low or the following division will make things go wacky.
                 Cam.m_framerateAdjust = Cam.m_targetframerate / Cam.m_framerate;
                 // createTextDLs(fpsDLOuter, "FPS: %2.2f\nFRA: %2.2f", Cam.m_framerate, Cam.m_framerateAdjust);
-                //TODO: make this reflect actual insideness
-                createTextDLs(fpsDLOuter, "FPS: %2.2f", Cam.m_framerate);
+                createTextDLs(fpsDLOuter, true, "FPS: %2.2f", Cam.m_framerate);
 
                 last_time = time_now;
 		frames = 0;
@@ -802,10 +855,12 @@ void drawText()
 	glLoadIdentity();
 
 	if (showFPS) glCallList(fpsDLOuter);
-	// else
-	if (showHelp) glCallList(helpDLOuter); // createTextDLs(helpText);
+	if (showHelp) glCallList(helpDLOuter);
+        if (showScores) glCallList(scoreListDL);
+        //TODO: clip score list to (smaller) rectangle
+        //TODO: scroll score list if too large
 
-        glCallList(solvDLOuter);
+        glCallList(timeDLOuter);
 
 	glPopMatrix();
 	resetPerspectiveProjection();	
@@ -857,15 +912,16 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
 	helpDLInner = helpDLOuter + 1;
 	fpsDLOuter = helpDLOuter + 2;
 	fpsDLInner = fpsDLOuter + 1;
-        solvDLOuter = fpsDLOuter + 2;
-        solvDLInner = solvDLOuter + 1;
+        timeDLOuter = fpsDLOuter + 2;
+        timeDLInner = timeDLOuter + 1;
+        scoreListDL = timeDLInner + 1;
 
-	// Initialize the help display list. The FPS DL is created every time FPS is recalculated.
-	createTextDLs(helpDLOuter, helpText);
-	createTextDLs(fpsDLOuter, "FPS: unknown");
-        createTextDLs(solvDLOuter, "Solving: n");
+	// Initialize the help display list. The FPS DL is recreated every time FPS is calculated.
+	createTextDLs(helpDLOuter, true, helpText);
+	createTextDLs(fpsDLOuter, true, "FPS: unknown");
+        createTextDLs(timeDLOuter, true, "");
 
-        facadeDL = solvDLInner + 1;
+        facadeDL = scoreListDL + 1;
         createFacadeDL(facadeDL);
 
 	return TRUE;										// Initialization Went OK
@@ -1514,7 +1570,7 @@ bool CheckKeys(void) {
 		keysStillDown[VK_OEM_2]=FALSE;
 	}
 
-	// 'T' key: toggle fps display
+        // 'T' key: toggle fps display
 	if (keysDown['T'] && !keysStillDown['T']) {
 		keysStillDown['T']=TRUE;
 		showFPS = !showFPS;
@@ -1523,6 +1579,18 @@ bool CheckKeys(void) {
 	else if (!keysDown['T'])
 	{
 		keysStillDown['T']=FALSE;
+	}
+
+	// 'l' key: toggle score list display
+	if (keysDown['L'] && !keysStillDown['L']) {
+		keysStillDown['L']=TRUE;
+		showScores = !showScores;
+		if (showScores)
+                   createTextDLs(scoreListDL, false, highScoreList.toString(maze));
+	}
+	else if (!keysDown['L'])
+	{
+		keysStillDown['L']=FALSE;
 	}
 
 	//if (keysDown['N'] && !keysStillDown['N'])

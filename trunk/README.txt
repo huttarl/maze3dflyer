@@ -22,10 +22,11 @@ Mouse: steer (if mouse grab is on)
 Home/End: go to maze entrance/exit
 Enter: toggle autopilot (not yet implemented)
 P: show path from entrance to exit (not yet implemented)
-Space: snap camera position/orientation to grid
+Space: stop and snap camera position/orientation to grid
 
 ?: toggle display of help text
-T: toggle frames-per-second display
+T: toggle display of framerate
+L: toggle display of best score list (arrow shows current maze config)
 F: cycle texture filter mode
 M or mouse-click: toggle mouse grab
 C: toggle collision checking (allow passing through walls or not)
@@ -33,6 +34,28 @@ F1: toggle full-screen mode
 
 Esc: exit
 
+
+High scores:
+
+Maze3dflyer keeps "high scores" (best times) for each maze configuration. A maze configuration consists
+of the maze size in three dimensions, together with the sparsity (see below). For example, the configuration
+for a 3x3x4 maze with sparsity 2 is expressed as 3x3x4/2, and the best score for that configuration would
+be listed as "3x3x4/2 .... 3.24s", indicating a fastest time of 3.24 seconds.
+Currently, no information about *who* achieved a particular score is recorded.
+
+Scores are saved to a file called "maze3dflyer_scores.txt" in the current directory where maze3dflyer is run.
+If you want to share a scores file among multiple players, arrange for maze3dflyer.exe to run in the same folder.
+However there is no protection against simultaneous players overwriting the score file and clobbering each other's scores,
+for example if a network share is used.
+
+
+Command line options:
+
+WxHxD: maze dimensions, in cells. Default: 8x8x8. Max: 20x20x20.
+-s #: sparsity. Higher numbers give more space between passages. Default: 3.
+-b #: branch clustering. Higher numbers, up to 6, cause branching to occur more evenly throughout the maze. Default: 2.
+-f: full-screen mode
+Example: maze3dflyer 5x5x12 -s 2
 
 (c) 2008 by Lars Huttar
 email: huttar dot net, username is lars

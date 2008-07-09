@@ -20,13 +20,15 @@ public:
    bool save(void);
    bool load(void);
    char *filepath;
-   HighScoreList() { filepath = "maze3dflyer_scores.yaml"; }
+   HighScoreList() { filepath = "maze3dflyer_scores.txt"; }
    // makeDims: convert the maze parameters to a single string
-   static char *makeDims(int w, int h, int d, int s) {
+   static char *makeDims(Maze3D &maze) {
       static char buf[16];
-      sprintf(buf, "%dx%dx%d/%d", w, h, d, s);
+      sprintf(buf, "%dx%dx%d/%d", maze.w, maze.h, maze.d, maze.sparsity);
       return buf;
    }
+   // return pointer to a static buffer with a display of scores
+   char *toString(Maze3D &maze);
 };
 
 extern HighScoreList highScoreList;
