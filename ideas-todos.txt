@@ -13,7 +13,7 @@
        x semiopaque background rect?
        - scroll when too many to fit on screen?
      x* notify player when new HS
-     - maybe record player username with best score?
+     - maybe record player username with best score? opens up portability issues...
  - would be fun to be able to "drop bread crumbs" ... leave markers in the maze to remind you where you've tried.
    - maybe 2 colors - red and green? - two keys (1 and 2?)
    - drop at current location precisely, not just center of cell
