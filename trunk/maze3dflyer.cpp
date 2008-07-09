@@ -69,7 +69,7 @@ HGLRC		hRC=NULL;		// Permanent Rendering Context
 HWND		hWnd=NULL;		// Holds Our Window Handle
 HINSTANCE	hInstance;		// Holds The Instance Of The Application
 
-GLuint	helpDLInner, helpDLOuter, fpsDLInner, fpsDLOuter, timeDLInner, timeDLOuter, scoreListDL, facadeDL; // display list ID's
+GLuint	helpDL, fpsDL, timeDL, scoreListDL, facadeDL; // display list ID's
 
 const float piover180 = 0.0174532925f;
 int xRes = 1024;
@@ -566,8 +566,8 @@ void renderBitmapLines(float x, float y, void *font, float lineSpacing, char *st
 
 // Create display lists to show text on HUD.
 // Changes current color.
-// Creates a DL at DLOuter, and an inner DL at DLOuter + 1. 
-// If those DLs exist already, they will be replaced.
+// Creates a DL at DL.
+// If the DL exists already, it will be replaced.
 GLvoid createTextDLs(GLuint DL, bool variableSpaced, const char *fmt, ...)
 {
    char text[1024];								// Holds Our String
@@ -588,12 +588,12 @@ GLvoid createTextDLs(GLuint DL, bool variableSpaced, const char *fmt, ...)
    vsprintf(text, fmt, ap);							// And Converts Symbols To Actual Numbers
    va_end(ap);											// Results Are Stored In Text
 
-   if (DL == helpDLOuter)
+   if (DL == helpDL)
       x = 5, y = lineHeight;
-   else if (DL == fpsDLOuter)
+   else if (DL == fpsDL)
       x = xRes - 100, y = yRes - lineHeight/2 + 2;
          //TODO ###: could count lines and columns in text and adjust y to yRes - lineHeight * lines and x to xRes - 10 * columns.
-   else if (DL == timeDLOuter)
+   else if (DL == timeDL)
       x = 5, y = yRes - lineHeight/2 + 2;
    else if (DL == scoreListDL)
       x = xRes - 9*31 + 20, y = lineHeight; // was x = xRes / 2 - 9*14 + 10, y = yRes / 4;
@@ -830,7 +830,7 @@ void drawText()
               (time_now - maze.whenEntered + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC);
         }
         else solvingStatus[0] = '\0';
-        createTextDLs(timeDLOuter, true, solvingStatus);
+        createTextDLs(timeDL, true, solvingStatus);
 
 	++frames;
 	// To update framerate more frequently, lower the right-hand side to e.g. (CLOCKS_PER_SEC / 2)
@@ -841,8 +841,8 @@ void drawText()
                 Cam.m_frametime = (time_now - last_time)/((float)frames * CLOCKS_PER_SEC);
                 if (Cam.m_framerate < Cam.m_minframerate) Cam.m_framerate = Cam.m_minframerate; // can't go too low or the following division will make things go wacky.
                 Cam.m_framerateAdjust = Cam.m_targetframerate / Cam.m_framerate;
-                // createTextDLs(fpsDLOuter, "FPS: %2.2f\nFRA: %2.2f", Cam.m_framerate, Cam.m_framerateAdjust);
-                createTextDLs(fpsDLOuter, true, "FPS: %2.2f", Cam.m_framerate);
+                // createTextDLs(fpsDL, "FPS: %2.2f\nFRA: %2.2f", Cam.m_framerate, Cam.m_framerateAdjust);
+                createTextDLs(fpsDL, true, "FPS: %2.2f", Cam.m_framerate);
 
                 last_time = time_now;
 		frames = 0;
@@ -854,13 +854,13 @@ void drawText()
 	glPushMatrix();
 	glLoadIdentity();
 
-	if (showFPS) glCallList(fpsDLOuter);
-	if (showHelp) glCallList(helpDLOuter);
+	if (showFPS) glCallList(fpsDL);
+	if (showHelp) glCallList(helpDL);
         if (showScores) glCallList(scoreListDL);
         //TODO: clip score list to (smaller) rectangle
         //TODO: scroll score list if too large
 
-        glCallList(timeDLOuter);
+        glCallList(timeDL);
 
 	glPopMatrix();
 	resetPerspectiveProjection();	
@@ -908,18 +908,15 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
 	SetupWorld();
 
 	// Create display lists for help and fps
-	helpDLOuter = glGenLists(5);
-	helpDLInner = helpDLOuter + 1;
-	fpsDLOuter = helpDLOuter + 2;
-	fpsDLInner = fpsDLOuter + 1;
-        timeDLOuter = fpsDLOuter + 2;
-        timeDLInner = timeDLOuter + 1;
-        scoreListDL = timeDLInner + 1;
+	helpDL = glGenLists(5);
+	fpsDL = helpDL + 1;
+        timeDL = fpsDL + 1;
+        scoreListDL = timeDL + 1;
 
 	// Initialize the help display list. The FPS DL is recreated every time FPS is calculated.
-	createTextDLs(helpDLOuter, true, helpText);
-	createTextDLs(fpsDLOuter, true, "FPS: unknown");
-        createTextDLs(timeDLOuter, true, "");
+	createTextDLs(helpDL, true, helpText);
+	createTextDLs(fpsDL, true, "FPS: unknown");
+        createTextDLs(timeDL, true, "");
 
         facadeDL = scoreListDL + 1;
         createFacadeDL(facadeDL);

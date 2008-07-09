@@ -48,6 +48,10 @@ If you want to share a scores file among multiple players, arrange for maze3dfly
 However there is no protection against simultaneous players overwriting the score file and clobbering each other's scores,
 for example if a network share is used.
 
+The scores file is not installed with the program; it does not exist until maze3dflyer has been run and a new time
+has been set (i.e. the first time a player solves a maze). Before the scores file exists, maze3dflyer may put
+out a debugging message saying the file cannot be found. This message can be ignored.
+
 
 Command line options:
 
