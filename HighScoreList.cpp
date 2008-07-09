@@ -17,7 +17,7 @@ bool HighScoreList::addScore(char *dims, float t) {
 }
 
 bool HighScoreList::addScore(Maze3D &maze) {
-   return addScore(makeDims(maze.w, maze.h, maze.d, maze.sparsity), ((maze.lastSolvedTime + 0.0) / CLOCKS_PER_SEC));
+   return addScore(makeDims(maze), ((maze.lastSolvedTime + 0.0) / CLOCKS_PER_SEC));
 }
 
 // get high score for a given map dimension
@@ -47,10 +47,34 @@ bool HighScoreList::save(void) {
    return true;
 }
 
+char *HighScoreList::toString(Maze3D &maze) {
+   static char buf[2048], line[30];
+   int chars = 0;
+   char *curDims = makeDims(maze);
+   char *s = buf + sprintf(buf, "     Maze size:   Best time:\n\n");
+
+   for (p = highScoreMap.begin(); p != highScoreMap.end(); p++) {
+      chars = sprintf(line, "%s%11s %12.2f\n",
+         !strcmp(p->first.c_str(), curDims) ? "-> " : "   ",
+         p->first.c_str(), p->second);
+      if (chars > 0) {
+         if (s - buf + chars >= sizeof(buf)) {
+            debugMsg("Line '%s' would overflow high score list buffer! %d >= %d\n",
+               line, s - buf, sizeof(buf));
+            return buf; // don't overflow the buffer
+         }
+         strcpy(s, line);
+         s += chars;
+      } // else should process failure in sprintf...
+   }
+   debugMsg("High score list follows:\n%s\n", buf);
+   return buf;
+}
+
 // load high scores from a file (using YAML)
 bool HighScoreList::load(void) {
    int count;
-   char line[256], dims[16];
+   char dims[16];
    float time;
 
    ifstream fp(filepath, ios::in);

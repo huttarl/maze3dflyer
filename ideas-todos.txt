@@ -8,8 +8,18 @@
 	   x not save for new times that are larger than old time for same dims
 	   x save for new times that are smaller, for same dims
 	   x save for new times for new dims
-     -* display high score list
-     -* notify player when new HS
+     x* display high score list
+       x middle of window
+       x semiopaque background rect?
+       - scroll when too many to fit on screen?
+     x* notify player when new HS
+     - maybe record player username with best score?
+ - would be fun to be able to "drop bread crumbs" ... leave markers in the maze to remind you where you've tried.
+   - maybe 2 colors - red and green? - two keys (1 and 2?)
+   - drop at current location precisely, not just center of cell
+   - maybe shape as tetrahedrons (rotating), glowing?, pulsating
+ - 'n' command to create new maze with current parameters.
+ - maybe add a "rear view mirror"?
  - big complex mazes will be more "legible" if there is a solid dark line along all outer edges
    - maybe a grid, so there are lines even between cells? but not in open space
    - how to draw so that it's visible, regardless of adjacent walls? make a 4-sided "diamond"-cross-section square prism around the line?
