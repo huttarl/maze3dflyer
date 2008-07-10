@@ -11,7 +11,13 @@ Extract the contents (executable and Data folder) somewhere so that the maze3dfl
 
 
 Use:
+
 Run the executable (maze3dflyer.exe) from the folder that is the parent of Data.
+
+
+Goal:
+
+Find your way through the maze from the entrance (green ring) to the exit (red).
 
 
 Controls:
@@ -71,6 +77,7 @@ http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=10 for the basis of const
 http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=Quaternion_Camera_Class for composed 3D camera rotation
 http://www.morrowland.com/apron/tutorials/gl/gl_jpeg_loader.zip for JPEG loader
 Textures (some only historically used):
+http://hazelwhorley.com/textures.html (Sahara skybox)
 http://www.3dmd.net/
 http://www.stormvisions.com/3DGS/roof1.jpg
 http://www.sharecg.com/

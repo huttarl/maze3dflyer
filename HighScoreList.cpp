@@ -49,14 +49,17 @@ bool HighScoreList::save(void) {
 
 char *HighScoreList::toString(Maze3D &maze) {
    static char buf[2048], line[30];
-   int chars = 0;
+   int chars = 0, minutes;
+   float seconds;
    char *curDims = makeDims(maze);
    char *s = buf + sprintf(buf, "     Maze size:   Best time:\n\n");
 
    for (p = highScoreMap.begin(); p != highScoreMap.end(); p++) {
-      chars = sprintf(line, "%s%11s %12.2f\n",
+      minutes = p->second / 60.0;
+      seconds = p->second - (minutes * 60.0);
+      chars = sprintf(line, "%s%11s %6d:%05.2f\n",
          !strcmp(p->first.c_str(), curDims) ? "-> " : "   ",
-         p->first.c_str(), p->second);
+         p->first.c_str(), minutes, seconds);
       if (chars > 0) {
          if (s - buf + chars >= sizeof(buf)) {
             debugMsg("Line '%s' would overflow high score list buffer! %d >= %d\n",
@@ -67,7 +70,7 @@ char *HighScoreList::toString(Maze3D &maze) {
          s += chars;
       } // else should process failure in sprintf...
    }
-   debugMsg("High score list follows:\n%s\n", buf);
+   // debugMsg("High score list follows:\n%s\n", buf);
    return buf;
 }
 
@@ -93,7 +96,7 @@ bool HighScoreList::load(void) {
 
    while (fp >> dims >> time) {
       // sscanf(line, "- [%s, %f]", dims, &time);
-      debugMsg("Read score line: '%s' -> %f\n", dims, time);
+      // debugMsg("Read score line: '%s' -> %f\n", dims, time);
       highScoreMap[dims] = time;
    }
 
