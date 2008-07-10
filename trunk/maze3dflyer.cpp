@@ -86,6 +86,7 @@ bool	autopilotMode=TRUE;		// autopilotMode on?
 bool	mouseGrab=TRUE;		// mouse centering is on?
 bool	showFPS=FALSE, showScores=FALSE; // whether to display framerate or score list
 bool	showHelp=TRUE;		// show help text
+bool    celebrating=false;      // showing solved-maze effect?
 
 // these should probably move to glCamera or a subclass thereof.
 float	keyTurnRate = 2.0f; // how fast to turn in response to keys
@@ -111,11 +112,15 @@ GLUquadricObj *quadric;
 
 const int numFilters = 3;		// How many filters for each texture
 GLuint filter = 2;				// Which filter to use
-const int numTextures = (sky - ground + 1);		// Max # textures (not counting filtering)
-GLuint	textures[numFilters * numTextures];		// Storage for texture indexes, with 3 filters each.
+const int numTextures = (roof - ground + 1);		// Max # textures (not counting filtering)
+GLuint textures[numFilters * numTextures];		// Storage for texture indexes, with 3 filters each.
+GLuint skyTextures[14];   // room for up, down, and up to 12 sideways directions
+GLuint effectTexture;
 
 //TODO: read this from a text file at runtime?
-static char helpText[] = "Controls:\n\
+static char helpText[] = "Find your way through the maze from the entrance (green ring) to the exit (red).\n\
+\n\
+Controls:\n\
 \n\
 Esc: exit\n\
 ?: toggle display of help text\n\
@@ -510,15 +515,60 @@ bool loadTexture(int i, char *filepath) {
    return status;
 }
 
+bool loadSkyTexture(int i, char *filepath) {
+   bool status = TRUE;
+   if(!filepath) return FALSE;
+
+#ifdef USE_JPG
+   tImageJPG *pBitMap = Load_JPEG(filepath);
+#   define bitmap pBitMap
+#else
+   AUX_RGBImageRec *TextureImage[1];               // Create Storage Space For The Texture
+   TextureImage[0] = LoadBMP(filepath);
+#   define bitmap (TextureImage[0])
+#endif
+
+   if(!bitmap || !bitmap->data) {
+      debugMsg("Failed to load sky texture %s\n", filepath);
+      return FALSE;
+   }
+
+   glGenTextures(1, &skyTextures[i]);          // Create texture
+
+   // Create MipMapped Texture
+   // debugMsg("Binding texture %s at %d\n", filepath, skyTextures[i]);
+   glBindTexture(GL_TEXTURE_2D, skyTextures[i]);
+   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+   // Interpolations make seams in the skybox.
+   //glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+   //glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST);
+   gluBuild2DMipmaps(GL_TEXTURE_2D, 3, bitmap->sizeX, bitmap->sizeY, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
+
+   free(bitmap->data);			
+   free(bitmap);
+   return status;
+}
+
 bool loadSkyTextures() {
    //TODO: unhardcode path
    //static char skyTexDir = "c:/Program Files/Stellarium/landscapes/garching";
    //static char path[1024];
    //TODO: read filenames from .ini file if stellarium landscape
 #ifdef USE_JPG
-   return loadTexture(sky, "Data/blue-sky.jpg");
+   return loadSkyTexture(0, "Data/skybox/sahara_down.jpg") &&
+      loadSkyTexture(1, "Data/skybox/sahara_up.jpg") &&
+      loadSkyTexture(2, "Data/skybox/sahara_north.jpg") &&
+      loadSkyTexture(3, "Data/skybox/sahara_east.jpg") &&
+      loadSkyTexture(4, "Data/skybox/sahara_south.jpg") &&
+      loadSkyTexture(5, "Data/skybox/sahara_west.jpg");
 #else
-   return loadTexture(sky, "Data/blue-sky.bmp");
+   return loadSkyTexture(0, "Data/skybox/sahara_down.bmp") &&
+      loadSkyTexture(1, "Data/skybox/sahara_up.bmp") &&
+      loadSkyTexture(2, "Data/skybox/sahara_north.bmp") &&
+      loadSkyTexture(3, "Data/skybox/sahara_east.bmp") &&
+      loadSkyTexture(4, "Data/skybox/sahara_south.bmp") &&
+      loadSkyTexture(5, "Data/skybox/sahara_west.bmp");
 #endif // USE_JPG
 }
 
@@ -534,8 +584,11 @@ bool LoadGLTextures()                                    // Load images and conv
    status = loadTexture(wall1, "Data/brickWall_tileable.bmp") && loadTexture(ground, "Data/carpet-6716-2x2mir.bmp")
       && loadTexture(wall2, "Data/rocky.bmp") && loadTexture(roof, "Data/roof1.bmp") && loadTexture(portal, "Data/wood-planks-4227.bmp");
 #endif
-   status = status && loadSkyTextures();
-   //debugMsg("Texture load status: %d\n", status);
+   loadSkyTextures(); // don't complain if this fails; sky textures are a big download.
+   // debugMsg("Texture load status: %d\n", status);
+
+   glGenTextures(1, &effectTexture);          // allocate texture for screen effects but don't load anything yet.
+
    return status;                                  // Return The Status
 }
 
@@ -812,6 +865,12 @@ void celebrateSolution() {
       maze.newBest = true;
    }
    else maze.newBest = false;
+
+   celebrating = true;
+
+   //// Thanks to Jakub at http://www.allegro.cc/forums/thread/535015 for screen-copying code:
+   //glBindTexture(GL_TEXTURE_2D, effectTexture);
+   //glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, SCREEN_W, SCREEN_H);
 }
 // see http://bytes.com/forum/post832171-3.html regarding CLOCKS_PER_SEC and clock_t type.
 
@@ -833,15 +892,15 @@ void drawText()
            sprintf(solvingStatus, "SOLVED in %d:%05.2f %s", minutes,
               (maze.lastSolvedTime + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC,
               maze.newBest ? " ** New best time! **" : "");
+        } else {
+            celebrating = false;
+            if (maze.whenEntered) {
+               minutes = (time_now - maze.whenEntered) / (CLOCKS_PER_SEC * 60);
+               sprintf(solvingStatus, "Solving: %d:%05.2f", minutes,
+                  (time_now - maze.whenEntered + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC);
+            }
+            else solvingStatus[0] = '\0';
         }
-        //else if (maze.hasFoundExit)
-        //   sprintf(solvingStatus, "Found exit");
-        else if (maze.whenEntered) {
-           minutes = (time_now - maze.whenEntered) / (CLOCKS_PER_SEC * 60);
-           sprintf(solvingStatus, "Solving: %d:%05.2f", minutes,
-              (time_now - maze.whenEntered + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC);
-        }
-        else solvingStatus[0] = '\0';
         createTextDLs(timeDL, true, solvingStatus);
 
 	++frames;
@@ -960,7 +1019,7 @@ void drawSkyBox(void) {
     glColor4f(1,1,1,1);
 
     // Render the front quad
-    glBindTexture(GL_TEXTURE_2D, textures[sky * numFilters + filter]);
+    glBindTexture(GL_TEXTURE_2D, skyTextures[2]);
     glBegin(GL_QUADS);
         glTexCoord2f(0, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
         glTexCoord2f(1, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
@@ -970,7 +1029,7 @@ void drawSkyBox(void) {
 
     // Render the left quad
     //TODO: use different textures
-    glBindTexture(GL_TEXTURE_2D, textures[sky * numFilters + filter]);
+    glBindTexture(GL_TEXTURE_2D, skyTextures[5]);
     glBegin(GL_QUADS);
         glTexCoord2f(0, 0); glVertex3f(  0.5f, -0.5f,  0.5f );
         glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
@@ -979,7 +1038,7 @@ void drawSkyBox(void) {
     glEnd();
 
     // Render the back quad
-    glBindTexture(GL_TEXTURE_2D, textures[sky * numFilters + filter]);
+    glBindTexture(GL_TEXTURE_2D, skyTextures[4]);
     glBegin(GL_QUADS);
         glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f,  0.5f );
         glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f,  0.5f );
@@ -988,7 +1047,7 @@ void drawSkyBox(void) {
     glEnd();
 
     // Render the right quad
-    glBindTexture(GL_TEXTURE_2D, textures[sky * numFilters + filter]);
+    glBindTexture(GL_TEXTURE_2D, skyTextures[3]);
     glBegin(GL_QUADS);
         glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
         glTexCoord2f(1, 0); glVertex3f( -0.5f, -0.5f,  0.5f );
@@ -997,7 +1056,7 @@ void drawSkyBox(void) {
     glEnd();
 
     // Render the top quad
-    glBindTexture(GL_TEXTURE_2D, textures[sky * numFilters + filter]);
+    glBindTexture(GL_TEXTURE_2D, skyTextures[1]);
     glBegin(GL_QUADS);
         glTexCoord2f(0, 1); glVertex3f( -0.5f,  0.5f, -0.5f );
         glTexCoord2f(0, 0); glVertex3f( -0.5f,  0.5f,  0.5f );
@@ -1006,7 +1065,7 @@ void drawSkyBox(void) {
     glEnd();
 
     // Render the bottom quad
-    glBindTexture(GL_TEXTURE_2D, textures[sky * numFilters + filter]);
+    glBindTexture(GL_TEXTURE_2D, skyTextures[0]);
     glBegin(GL_QUADS);
         glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
         glTexCoord2f(0, 1); glVertex3f( -0.5f, -0.5f,  0.5f );
@@ -1019,9 +1078,33 @@ void drawSkyBox(void) {
     glPopMatrix();
 }
 
+void celebrationEffect() {
+   clock_t time_now = clock();
+   unsigned int flashCount = (time_now - maze.whenSolved) * 7 / CLOCKS_PER_SEC;
+   float alpha = (flashCount % 2) / (0.5 * flashCount);
+   glLoadIdentity();
+
+   // Thanks to http://steinsoft.net/index.php?site=Programming/Code%20Snippets/OpenGL/no1
+
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   glEnable(GL_BLEND);
+   glDisable(GL_DEPTH_TEST);
+
+   glBegin(GL_QUADS);
+      glColor4f(0.8f, 0.8f, 1.0f, alpha);
+      glVertex3f(1.15f, 1.15f, -2.0f);
+      glVertex3f(-1.15f, 1.15f, -2.0f);
+      glVertex3f(-1.15f, -1.15f, -2.0f);
+      glVertex3f(1.15f, -1.15f, -2.0f);
+   glEnd();
+
+   glEnable(GL_DEPTH_TEST);
+
+}
+
 int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 {
-	if (blend) {			// do polygon anti-aliasing, a la http://glprogramming.com/red/chapter06.html#name2
+	if (blend) {			// ? do polygon anti-aliasing, a la http://glprogramming.com/red/chapter06.html#name2
 		glClear (GL_COLOR_BUFFER_BIT);
 	} else {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear The Screen And The Depth Buffer
@@ -1127,6 +1210,10 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 	// display entrance/exit (may mess up rot/transf matrix)
 	maze.ccEntrance.drawExit(maze.entranceWall, true);
 	maze.ccExit.drawExit(maze.exitWall, false);
+
+        // if just solved the maze, flash the screen
+        if (celebrating)
+           celebrationEffect();
 
 	drawText();											// draw any needed screen text, such as FPS
 
