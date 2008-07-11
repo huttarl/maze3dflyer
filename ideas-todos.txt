@@ -1,6 +1,13 @@
  * To do:
+ ** get jpg loading to work - will greatly reduce download size.
+ - test flash when new time - text centered right?
+ -** turn off mouse pointer when mouse grabbing
  - have a slower speed setting for when you're navigating the maze. E.g. CTRL to toggle speeds.
    This would affect keyAccel?
+ - In 2.0... have a more urgent mode (maybe just one of multiple modes) where you have no choice
+   but to find you way out of the maze. (And you have more tools to do it, like breadcrumbs.)
+   Currently, there's no pressure... you can always back out or even teleport out, and there's
+   no pressure to even go in.
  *- add better effect when you solve maze, e.g. flash screen
  *x display high scores (for each w/h/d/s combo?) 
      x data structure - dictionary? (w/h/d/s -> min time)
