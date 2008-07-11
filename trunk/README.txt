@@ -62,10 +62,10 @@ out a debugging message saying the file cannot be found. This message can be ign
 Command line options:
 
 WxHxD: maze dimensions, in cells. Default: 8x8x8. Max: 20x20x20.
--s #: sparsity. Higher numbers give more space between passages. Default: 3.
+WxHxD/s: maze dimensions and sparsity. Higher sparsity gives more space between passages. Default: 3.
 -b #: branch clustering. Higher numbers, up to 6, cause branching to occur more evenly throughout the maze. Default: 2.
 -f: full-screen mode
-Example: maze3dflyer 5x5x12 -s 2
+Example: maze3dflyer 5x5x12/2 -f
 
 (c) 2008 by Lars Huttar
 email: huttar dot net, username is lars

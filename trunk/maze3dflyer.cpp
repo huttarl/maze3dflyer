@@ -1522,13 +1522,15 @@ void freeResources() {
 }
 
 void handleArgs(int argc, LPWSTR *argv) {
-   int i;
+   int i, res;
    int w=8, d=8, h=8, s=3, b=2;
 
    // skip program names
    for (i = 1; i < argc; i++) {
-      if (swscanf(argv[i], L"%dx%dx%d", &w, &h, &d) == 3) {
+      res = swscanf(argv[i], L"%dx%dx%d/%d", &w, &h, &d, &s);
+      if (res == 3 || res == 4) {
          maze.w = w; maze.h = h; maze.d = d;
+         if (res == 4) maze.sparsity = s;
          continue;
       }
       else if (argv[i][0] == '-') {
