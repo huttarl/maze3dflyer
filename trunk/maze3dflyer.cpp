@@ -658,8 +658,12 @@ GLvoid createTextDLs(GLuint DL, bool variableSpaced, const char *fmt, ...)
    else if (DL == fpsDL)
       x = xRes - 100, y = yRes - lineHeight/2 + 2;
          //TODO ###: could count lines and columns in text and adjust y to yRes - lineHeight * lines and x to xRes - 10 * columns.
-   else if (DL == timeDL)
-      x = 5, y = yRes - lineHeight/2 + 2;
+   else if (DL == timeDL) {
+      if (celebrating)
+         x = xRes / 2 - 9*strlen(text)/2, y = yRes/2 - lineHeight*2;
+      else
+         x = 5, y = yRes - lineHeight/2 + 2;
+   }
    else if (DL == scoreListDL)
       x = xRes - 9*31 + 20, y = lineHeight; // was x = xRes / 2 - 9*14 + 10, y = yRes / 4;
    else x=0, y=0; // default, unused
@@ -891,7 +895,7 @@ void drawText()
            minutes = maze.lastSolvedTime / (CLOCKS_PER_SEC * 60);
            sprintf(solvingStatus, "SOLVED in %d:%05.2f %s", minutes,
               (maze.lastSolvedTime + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC,
-              maze.newBest ? " ** New best time! **" : "");
+              maze.newBest ? "-- ** New best time! **" : "");
         } else {
             celebrating = false;
             if (maze.whenEntered) {
@@ -1080,18 +1084,25 @@ void drawSkyBox(void) {
 
 void celebrationEffect() {
    clock_t time_now = clock();
-   unsigned int flashCount = (time_now - maze.whenSolved) * 7 / CLOCKS_PER_SEC;
-   float alpha = (flashCount % 2) / (0.5 * flashCount);
+   const int scaleFactor = 10;
+   const float maxAlpha = 0.7;
+   unsigned int flashCount = (time_now - maze.whenSolved) * scaleFactor / CLOCKS_PER_SEC;
+   if (flashCount > 3 * scaleFactor) return; // don't flash quite as long as we display score
+   // ramp alpha from max down to 0; alternate ramp with 0 (full transparency).
+   float alpha = ((flashCount + 1) % 2) * maxAlpha * (howLongShowSolved * scaleFactor - flashCount) / (howLongShowSolved * scaleFactor);
+   debugMsg("flashCount: %d; alpha: %f\n", flashCount, alpha);
+
+   // Thanks to http://steinsoft.net/index.php?site=Programming/Code%20Snippets/OpenGL/no1 for this idea:
+   // Draw a quad in front of the camera and modulate its transparency.
    glLoadIdentity();
-
-   // Thanks to http://steinsoft.net/index.php?site=Programming/Code%20Snippets/OpenGL/no1
-
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    glEnable(GL_BLEND);
    glDisable(GL_DEPTH_TEST);
 
    glBegin(GL_QUADS);
-      glColor4f(0.8f, 0.8f, 1.0f, alpha);
+      //glColor4f(0.8f, 0.8f, 1.0f, alpha);
+      float brightness = alpha + 1 - maxAlpha; // fade quad from white to almost-black
+      glColor4f(brightness, brightness, brightness, alpha); 
       glVertex3f(1.15f, 1.15f, -2.0f);
       glVertex3f(-1.15f, 1.15f, -2.0f);
       glVertex3f(-1.15f, -1.15f, -2.0f);
