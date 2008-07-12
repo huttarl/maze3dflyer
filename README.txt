@@ -22,21 +22,24 @@ Find your way through the maze from the entrance (green ring) to the exit (red).
 
 Controls:
 
+Esc: exit
+?: toggle display of help text
 WASD: move
 Arrow keys: turn
 Mouse: steer (if mouse grab is on)
 Home/End: go to maze entrance/exit
-Enter: toggle autopilot (not yet implemented)
-P: show path from entrance to exit (not yet implemented)
-Space: stop and snap camera position/orientation to grid
 
-?: toggle display of help text
+Shift: toggle higher speed
+M or mouse-click: toggle mouse grab
 T: toggle display of framerate
 L: toggle display of best score list (arrow shows current maze config)
-F: cycle texture filter mode
-M or mouse-click: toggle mouse grab
-C: toggle collision checking (allow passing through walls or not)
 F1: toggle full-screen mode
+
+F: cycle texture filter mode
+C: toggle collision checking (allow passing through walls or not)
+Space: stop and snap camera position/orientation to grid
+Enter: toggle autopilot (not yet implemented)
+P: show path from entrance to exit (not yet implemented)
 
 Esc: exit
 
@@ -46,7 +49,7 @@ High scores:
 Maze3dflyer keeps "high scores" (best times) for each maze configuration. A maze configuration consists
 of the maze size in three dimensions, together with the sparsity (see below). For example, the configuration
 for a 3x3x4 maze with sparsity 2 is expressed as 3x3x4/2, and the best score for that configuration would
-be listed as "3x3x4/2 .... 3.24s", indicating a fastest time of 3.24 seconds.
+be listed as "3x3x4/2 .... 0:03.24", indicating a fastest time of 3.24 seconds.
 Currently, no information about *who* achieved a particular score is recorded.
 
 Scores are saved to a file called "maze3dflyer_scores.txt" in the current directory where maze3dflyer is run.
