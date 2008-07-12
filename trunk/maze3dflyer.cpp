@@ -79,14 +79,15 @@ char title[] = "3D Maze Flyer";
 bool	keysDown[256];		// keys for which we have received down events (and no release)
 bool	keysStillDown[256];	// keys for which we have already processed inital down events (and no release)
 							// keysStillDown[] is the equivalent of what used to be mp, bp, etc.
-bool	active=TRUE;		// Window Active Flag Set To TRUE By Default
-bool	fullscreen=FALSE;	// Fullscreen Flag Set To Fullscreen Mode By Default
-bool	blend=FALSE;		// Blending ON/OFF
-bool	autopilotMode=TRUE;		// autopilotMode on?
-bool	mouseGrab=TRUE;		// mouse centering is on?
-bool	showFPS=FALSE, showScores=FALSE; // whether to display framerate or score list
-bool	showHelp=TRUE;		// show help text
-bool    celebrating=false;      // showing solved-maze effect?
+bool	active = true;		// Window Active Flag Set To TRUE By Default
+bool	fullscreen = false;	// Fullscreen Flag Set To Fullscreen Mode By Default
+bool	blend = false;		// Blending ON/OFF
+bool	autopilotMode = false;		// autopilotMode on?
+bool	mouseGrab = false;		// mouse centering is on?
+bool	showFPS = false, showScores = false; // whether to display framerate or score list
+bool	showHelp = true;		// show help text
+bool    celebrating = false;      // showing solved-maze effect?
+bool    highSpeed = false;      // high-speed mode
 
 // these should probably move to glCamera or a subclass thereof.
 float	keyTurnRate = 2.0f; // how fast to turn in response to keys
@@ -124,20 +125,15 @@ Controls:\n\
 \n\
 Esc: exit\n\
 ?: toggle display of help text\n\
-\n\
 WASD: move\n\
-Arrow keys: turn\n\
 Mouse: steer (if mouse grab is on)\n\
+Arrow keys: turn\n\
 Home/End: jump to maze entrance/exit\n\
-Enter: toggle autopilot (not yet implemented)\n\
-P: show path from entrance to exit (not yet implemented)\n\
-Space: snap camera position/orientation to grid\n\
 \n\
 M or left-click: toggle mouse grab\n\
+Shift: toggle high speed\n\
 T: toggle frames-per-second display\n\
 L: toggle display of best score list (arrow shows current maze config)\n\
-F: cycle texture filter mode\n\
-C: toggle collision checking (allow passing through walls or not)\n\
 F1: toggle full-screen mode";
 
 const int howLongShowSolved = 5; // for how many do we display "SOLVED"?
@@ -429,7 +425,7 @@ void SetupWorld()
 	// debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
 
 	// Now set up our max values for the camera
-	Cam.m_MaxVelocity = maze.wallMargin * 1.0f;
+	Cam.m_MaxVelocity = maze.wallMargin * 0.5f; //TODO: make this changeable by keyboard
 	Cam.m_MaxAccel = Cam.m_MaxVelocity * 0.5f;
 	Cam.m_MaxPitchRate = 5.0f;
 	Cam.m_MaxPitch = 89.9f;
@@ -1487,6 +1483,7 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,			// Handle For This Window
 		case WM_KEYDOWN:							// Is A Key Being Held Down?
 		{
 			keysDown[wParam] = TRUE;					// If So, Mark It As TRUE
+                        //debugMsg("key down: %d\n", wParam);
 			autopilotMode = false;
 			return 0;								// Jump Back
 		}
@@ -1548,6 +1545,7 @@ void handleArgs(int argc, LPWSTR *argv) {
          }
       }
       debugMsg("Unrecognized command-line option: %s\n", argv[i]);
+      
    }
 
 }
@@ -1619,7 +1617,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 	return ((int)msg.wParam);								// Exit The Program
 }
 
-// FIXME: factor out common code, particularly for keys that are not held down, such as SPACE.
+//TODO: factor out common code, particularly for keys that are not held down, such as SPACE.
 // Make an array appKeys[] = { VK_SPACE, 'F', ... }
 // then loop through the array.
 // Maybe also use portable openGL code instead of windows-specific?
@@ -1739,6 +1737,18 @@ bool CheckKeys(void) {
 	else if (!keysDown['C'])
 	{
 		keysStillDown['C']=FALSE;
+	}
+
+        if (keysDown[VK_SHIFT] && !keysStillDown[VK_SHIFT])
+	{
+		// toggle high speed
+		keysStillDown[VK_SHIFT]=TRUE;
+		highSpeed = !highSpeed;
+                Cam.m_MaxVelocity = maze.wallMargin * (highSpeed ? 1.0 : 0.5);
+	}
+	else if (!keysDown[VK_SHIFT])
+	{
+		keysStillDown[VK_SHIFT]=FALSE;
 	}
 
 	if (keysDown['F'] && !keysStillDown['F'])
