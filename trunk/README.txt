@@ -30,6 +30,7 @@ Mouse: steer (if mouse grab is on)
 Home/End: go to maze entrance/exit
 
 Shift: toggle higher speed
+N: generate new maze
 M or mouse-click: toggle mouse grab
 T: toggle display of framerate
 L: toggle display of best score list (arrow shows current maze config)
