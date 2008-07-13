@@ -190,6 +190,7 @@ void generateMaze()
 	queue[0].y = rand() % maze.h;
 	queue[0].z = rand() % maze.d;
 	queue[0].setCellState(Cell::passage);
+        maze.numPassageCells = 1;
 	maze.ccEntrance = maze.ccExit = queue[0];
 	queueSize++;
 
@@ -258,7 +259,8 @@ void generateMaze()
 					// We have the potential for expansion into this neighbor.
 					// Tend to not expand into too many neighbors from one cell (limit branch clustering).
 					if (rand() % (addedNeighbors + 1) > maze.branchClustering) {
-						// don't expand into neighbor, but don't mark it forbidden either.
+						// don't expand into neighbor, but don't mark it forbidden either,
+                                                // because another cell could expand into it.
 						currCell->setStateOfWallTo(ni, Wall::CLOSED);
 						break;
 					}
@@ -288,6 +290,8 @@ void generateMaze()
 			}
 		}
 
+                maze.numPassageCells += addedNeighbors;
+
 		// remove currCell from the queue (swap in last cell of queue)
 		if (currCell - queue != queueSize - 1) {
 			temp = *currCell;
@@ -309,14 +313,20 @@ void generateMaze()
 	//xWalls[w][h-1][d-1].state = Wall::OPEN;
 
 	delete [] queue;
+
+
+        debugMsg("numPassageCells: %d of %d//%d. Prediction %d\n", maze.numPassageCells, maze.w * maze.h * maze.d, maze.sparsity,
+           maze.w * maze.h * maze.d / (maze.sparsity * maze.sparsity));
+
+        HighScoreList::complexityStats();
 }
 
 // #define d(x) (0) // ((maze.zWalls[0][0][0].state == 0) ? debugMsg(" [z0 @ %d] ", (x)) : 0)
 
-// initialize wall vertices and states.
+// initialize cell states and wall vertices and states.
 // If initVertices is false, don't initialize vertices (they're already set).
-
-void initWalls(bool initVertices = true) {
+//TODO: should this be a method of Maze3D class?
+void initCellsWalls(bool initVertices = true) {
    // this const was used when we wanted an outer shell around the whole space that the maze could potentially occupy.
    // For that, set outerWallState = Wall::CLOSED.
    const Wall::WallState outerWallState = Wall::UNINITIALIZED;
@@ -428,6 +438,7 @@ void initWalls(bool initVertices = true) {
 }
 
 void newMaze() {
+   initCellsWalls(false);
    generateMaze();
    Cam.m_ForwardVelocity = 0.0f;
    Cam.m_SidewaysVelocity = 0.0f;
@@ -436,40 +447,40 @@ void newMaze() {
 
 void SetupWorld()
 {
-	maze.exitRot = 0.0f;
+   maze.exitRot = 0.0f;
 
-	// allocate wall arrays
-	maze.xWalls = new Wall[maze.w+1][Maze3D::hMax][Maze3D::dMax];
-	maze.yWalls = new Wall[maze.w][Maze3D::hMax+1][Maze3D::dMax];
-	maze.zWalls = new Wall[maze.w][Maze3D::hMax][Maze3D::dMax+1];
+   // allocate wall arrays
+   maze.xWalls = new Wall[maze.w+1][Maze3D::hMax][Maze3D::dMax];
+   maze.yWalls = new Wall[maze.w][Maze3D::hMax+1][Maze3D::dMax];
+   maze.zWalls = new Wall[maze.w][Maze3D::hMax][Maze3D::dMax+1];
 
-	// allocate cell arrays
-	maze.cells = new Cell[maze.w][Maze3D::hMax][Maze3D::dMax];
+   // allocate cell arrays
+   maze.cells = new Cell[maze.w][Maze3D::hMax][Maze3D::dMax];
 
-        initWalls(true); // initialize wall vertices and states.
+   initCellsWalls(true); // initialize wall vertices and states.
 
-        // debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
+   // debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
 
-	// Now set up our max values for the camera
-	Cam.m_MaxVelocity = maze.wallMargin * 0.5f; //TODO: make this changeable by keyboard
-	Cam.m_MaxAccel = Cam.m_MaxVelocity * 0.5f;
-	Cam.m_MaxPitchRate = 5.0f;
-	Cam.m_MaxPitch = 89.9f;
-	Cam.m_MaxHeadingRate = 5.0f;
-	//Cam.m_PitchDegrees = 0.0f;
-	//Cam.m_HeadingDegrees = 0.0f;
-	//Cam.m_Position.x = 0.0f * maze.cellSize;
-	//Cam.m_Position.y = 1.0f * maze.cellSize;
-	//Cam.m_Position.z = -15.0f * maze.cellSize;
+   // Now set up our max values for the camera
+   Cam.m_MaxVelocity = maze.wallMargin * 0.5f; //TODO: make this changeable by keyboard
+   Cam.m_MaxAccel = Cam.m_MaxVelocity * 0.5f;
+   Cam.m_MaxPitchRate = 5.0f;
+   Cam.m_MaxPitch = 89.9f;
+   Cam.m_MaxHeadingRate = 5.0f;
+   //Cam.m_PitchDegrees = 0.0f;
+   //Cam.m_HeadingDegrees = 0.0f;
+   //Cam.m_Position.x = 0.0f * maze.cellSize;
+   //Cam.m_Position.y = 1.0f * maze.cellSize;
+   //Cam.m_Position.z = -15.0f * maze.cellSize;
 
-        newMaze();
+   newMaze();
 
-	ap = new Autopilot();
-	ap->init(maze, Cam);
+   ap = new Autopilot();
+   ap->init(maze, Cam);
 
-	memset((void *)keysDown, 0, sizeof(keysDown));
-	memset((void *)keysStillDown, 0, sizeof(keysStillDown));
-	return;
+   memset((void *)keysDown, 0, sizeof(keysDown));
+   memset((void *)keysStillDown, 0, sizeof(keysStillDown));
+   return;
 }
 
 AUX_RGBImageRec *LoadBMP(char *Filename)                // Loads A Bitmap Image
@@ -674,18 +685,18 @@ GLvoid createTextDLs(GLuint DL, bool variableSpaced, const char *fmt, ...)
    vsprintf(text, fmt, ap);							// And Converts Symbols To Actual Numbers
    va_end(ap);											// Results Are Stored In Text
 
-   if (DL == helpDL)
+   if (DL == helpDL) // position of helpText
       x = 5, y = lineHeight;
-   else if (DL == fpsDL)
+   else if (DL == fpsDL) // position of framerate text
       x = xRes - 100, y = yRes - lineHeight/2 + 2;
          //TODO ###: could count lines and columns in text and adjust y to yRes - lineHeight * lines and x to xRes - 10 * columns.
-   else if (DL == timeDL) {
+   else if (DL == timeDL) { // position of timer text
       if (celebrating)
          x = xRes / 2 - 9*strlen(text)/2, y = yRes/2 - lineHeight*2;
       else
          x = 5, y = yRes - lineHeight/2 + 2;
    }
-   else if (DL == scoreListDL)
+   else if (DL == scoreListDL) // position of score list
       x = xRes - 9*31 + 20, y = lineHeight; // was x = xRes / 2 - 9*14 + 10, y = yRes / 4;
    else x=0, y=0; // default, unused
 

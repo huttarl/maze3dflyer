@@ -27,7 +27,7 @@ float HighScoreList::getHighScore(char *dims) {
    else return p->second;
 }
 
-// save high scores to a file (using YAML)
+// save high scores to a file
 bool HighScoreList::save(void) {
    ofstream fp(filepath, ios::out);
 
@@ -37,7 +37,8 @@ bool HighScoreList::save(void) {
    }
 
    fp << "# High scores for maze3dflyer" << endl;
-   fp << "# " << (unsigned int)(highScoreMap.size()) << " entries." << endl; // may not be used by this program but useful for somebody.
+   // since this number will be parsed back in, don't put it in a "comment".
+   fp << (unsigned int)(highScoreMap.size()) << " # Number of entries." << endl; // may not be used by this program but useful for somebody.
 
    for (p = highScoreMap.begin(); p != highScoreMap.end(); p++) {
       fp << p->first << " " << setiosflags(ios::fixed) << setprecision(2) << p->second << endl;
@@ -74,7 +75,7 @@ char *HighScoreList::toString(Maze3D &maze) {
    return buf;
 }
 
-// load high scores from a file (using YAML)
+// load high scores from a file
 bool HighScoreList::load(void) {
    int count;
    char dims[16];
@@ -87,10 +88,11 @@ bool HighScoreList::load(void) {
       return false;
    }
 
+   //TODO: be a little more flexible; ignore lines that are blank and text after '#'.
+   // Don't require the hs file to have exactly one initial comment line.
    fp.ignore(256, '\n'); // ignore "# High scores for maze3dflyer\n" 
-   fp.ignore(3, ' '); // ignore "# "
    fp >> count;
-   fp.ignore(256, '\n'); // ignore " entries.\n"
+   fp.ignore(256, '\n'); // ignore " # Number of entries.\n"
 
    highScoreMap.clear();
 
@@ -105,5 +107,22 @@ bool HighScoreList::load(void) {
 
    fp.close();
    return true;
+}
+
+// only intended for developer use
+void HighScoreList::complexityStats(void) {
+   // Accumulate stats about complexity of maze:
+   {
+      char *fn = "mazeComplexityStats.txt";
+      int volume = maze.w * maze.h * maze.d;
+      ofstream fp(fn, ios::app);
+
+      if (!fp) {
+         debugMsg("Can't open output file %s\n", fn);
+         return;
+      }
+      fp << "numPassageCells: " << maze.numPassageCells << " of " << volume << "//" << maze.sparsity << ". Prediction: " << 
+         volume / (maze.sparsity * maze.sparsity) << endl;
+   }
 }
 
