@@ -130,6 +130,7 @@ Mouse: steer (if mouse grab is on)\n\
 Arrow keys: turn\n\
 Home/End: jump to maze entrance/exit\n\
 \n\
+N: new maze\n\
 M or left-click: toggle mouse grab\n\
 Shift: toggle high speed\n\
 T: toggle frames-per-second display\n\
@@ -310,14 +311,131 @@ void generateMaze()
 	delete [] queue;
 }
 
-#define d(x) (0) // ((maze.zWalls[0][0][0].state == 0) ? debugMsg(" [z0 @ %d] ", (x)) : 0)
+// #define d(x) (0) // ((maze.zWalls[0][0][0].state == 0) ? debugMsg(" [z0 @ %d] ", (x)) : 0)
+
+// initialize wall vertices and states.
+// If initVertices is false, don't initialize vertices (they're already set).
+
+void initWalls(bool initVertices = true) {
+   // this const was used when we wanted an outer shell around the whole space that the maze could potentially occupy.
+   // For that, set outerWallState = Wall::CLOSED.
+   const Wall::WallState outerWallState = Wall::UNINITIALIZED;
+   int i, j, k;
+   Vertex *pv;
+
+   // set up vertices and states of xWalls, yWalls, zWalls
+   for (i=0; i <= maze.w; i++)
+      for (j=0; j <= maze.h; j++)
+         for (k=0; k <= maze.d; k++) {
+	    if (i < maze.w && j < maze.h && k < maze.d)
+               maze.cells[i][j][k].state = Cell::uninitialized;
+	    // debugMsg("%d %d %d ", i, j, k); d(1);
+	    if (j < maze.h && k < maze.d) {	// xWall:					
+	       maze.xWalls[i][j][k].state = (i == 0 || i == maze.w) ? outerWallState : Wall::UNINITIALIZED;
+	       // debugMsg("x: %d ", maze.xWalls[i][j][k].state); d(2);
+               if (initVertices) {
+	          pv = &(maze.xWalls[i][j][k].quad.vertices[0]);
+	          pv->x = maze.cellSize*i;
+	          pv->y = maze.cellSize*j;
+	          pv->z = maze.cellSize*k;
+	          pv->u = 0.0;
+	          pv->v = 0.0;
+	          pv = &(maze.xWalls[i][j][k].quad.vertices[1]);
+	          pv->x = maze.cellSize*i;
+	          pv->y = maze.cellSize*j;
+	          pv->z = maze.cellSize*(k+1);
+	          pv->u = 1.0;
+	          pv->v = 0.0;
+	          pv = &(maze.xWalls[i][j][k].quad.vertices[2]);
+	          pv->x = maze.cellSize*i;
+	          pv->y = maze.cellSize*(j+1);
+	          pv->z = maze.cellSize*(k+1);
+	          pv->u = 1.0;
+	          pv->v = 1.0;
+	          pv = &(maze.xWalls[i][j][k].quad.vertices[3]);
+	          pv->x = maze.cellSize*i;
+	          pv->y = maze.cellSize*(j+1);
+	          pv->z = maze.cellSize*k;
+	          pv->u = 0.0;
+	          pv->v = 1.0;
+               }
+	    }
+	    if (i < maze.w && k < maze.d) {	// yWall:
+	       maze.yWalls[i][j][k].state = (j == 0 || j == maze.h) ? outerWallState : Wall::UNINITIALIZED;
+	       // debugMsg("y: %d ", maze.yWalls[i][j][k].state); d(3);
+               if (initVertices) {
+	          pv = &(maze.yWalls[i][j][k].quad.vertices[0]);
+	          pv->x = maze.cellSize*i;
+	          pv->y = maze.cellSize*j;
+	          pv->z = maze.cellSize*k;
+	          pv->u = 0.0;
+	          pv->v = 0.0;
+	          pv = &(maze.yWalls[i][j][k].quad.vertices[1]);
+	          pv->x = maze.cellSize*i;
+	          pv->y = maze.cellSize*j;
+	          pv->z = maze.cellSize*(k+1);
+	          pv->u = 1.0;
+	          pv->v = 0.0;
+	          pv = &(maze.yWalls[i][j][k].quad.vertices[2]);
+	          pv->x = maze.cellSize*(i+1);
+	          pv->y = maze.cellSize*j;
+	          pv->z = maze.cellSize*(k+1);
+	          pv->u = 1.0;
+	          pv->v = 1.0;
+	          pv = &(maze.yWalls[i][j][k].quad.vertices[3]);
+	          pv->x = maze.cellSize*(i+1);
+	          pv->y = maze.cellSize*j;
+	          pv->z = maze.cellSize*k;
+	          pv->u = 0.0;
+	          pv->v = 1.0;
+               }
+	    }
+	    if (i < maze.w && j < maze.h) {	// zWall:
+	       maze.zWalls[i][j][k].state = (k == 0 || k == maze.d) ? outerWallState : Wall::UNINITIALIZED;
+	       // debugMsg("z: %d", maze.zWalls[i][j][k].state); d(4);
+               if (initVertices) {
+	          pv = &(maze.zWalls[i][j][k].quad.vertices[0]);
+	          pv->x = maze.cellSize*i;
+	          pv->y = maze.cellSize*j;
+	          pv->z = maze.cellSize*k;
+	          pv->u = 0.0;
+	          pv->v = 0.0;
+	          pv = &(maze.zWalls[i][j][k].quad.vertices[1]);
+	          pv->x = maze.cellSize*i;
+	          pv->y = maze.cellSize*(j+1);
+	          pv->z = maze.cellSize*k;
+	          pv->u = 0.0;
+	          pv->v = 1.0;
+	          pv = &(maze.zWalls[i][j][k].quad.vertices[2]);
+	          pv->x = maze.cellSize*(i+1);
+	          pv->y = maze.cellSize*(j+1);
+	          pv->z = maze.cellSize*k;
+	          pv->u = 1.0;
+	          pv->v = 1.0;
+	          pv = &(maze.zWalls[i][j][k].quad.vertices[3]);
+	          pv->x = maze.cellSize*(i+1);
+	          pv->y = maze.cellSize*j;
+	          pv->z = maze.cellSize*k;
+	          pv->u = 1.0;
+	          pv->v = 0.0;
+               }
+	    }
+	    // debugMsg("\n");
+	    // debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
+         }
+
+   return;
+}
+
+void newMaze() {
+   generateMaze();
+   Cam.m_ForwardVelocity = 0.0f;
+   Cam.m_SidewaysVelocity = 0.0f;
+   maze.ccEntrance.standOutside(maze.entranceWall);
+}
 
 void SetupWorld()
 {
-	const Wall::WallState outerWallState = Wall::UNINITIALIZED;
-	Vertex *pVertex;
-	int i, j, k;
-
 	maze.exitRot = 0.0f;
 
 	// allocate wall arrays
@@ -328,101 +446,9 @@ void SetupWorld()
 	// allocate cell arrays
 	maze.cells = new Cell[maze.w][Maze3D::hMax][Maze3D::dMax];
 
-	// set up vertices and states of xWalls, yWalls, zWalls
-	for (i=0; i <= maze.w; i++)
-		for (j=0; j <= maze.h; j++)
-			for (k=0; k <= maze.d; k++) {
-				if (i < maze.w && j < maze.h && k < maze.d) maze.cells[i][j][k].state = Cell::uninitialized;
-				// debugMsg("%d %d %d ", i, j, k); d(1);
-				if (j < maze.h && k < maze.d) {	// xWall:					
-					maze.xWalls[i][j][k].state = (i == 0 || i == maze.w) ? outerWallState : Wall::UNINITIALIZED;
-					// debugMsg("x: %d ", maze.xWalls[i][j][k].state); d(2);
-					pVertex = &(maze.xWalls[i][j][k].quad.vertices[0]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*k;
-					pVertex->u = 0.0;
-					pVertex->v = 0.0;
-					pVertex = &(maze.xWalls[i][j][k].quad.vertices[1]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*(k+1);
-					pVertex->u = 1.0;
-					pVertex->v = 0.0;
-					pVertex = &(maze.xWalls[i][j][k].quad.vertices[2]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*(j+1);
-					pVertex->z = maze.cellSize*(k+1);
-					pVertex->u = 1.0;
-					pVertex->v = 1.0;
-					pVertex = &(maze.xWalls[i][j][k].quad.vertices[3]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*(j+1);
-					pVertex->z = maze.cellSize*k;
-					pVertex->u = 0.0;
-					pVertex->v = 1.0;
-				}
-				if (i < maze.w && k < maze.d) {	// yWall:
-					maze.yWalls[i][j][k].state = (j == 0 || j == maze.h) ? outerWallState : Wall::UNINITIALIZED;
-					// debugMsg("y: %d ", maze.yWalls[i][j][k].state); d(3);
-					pVertex = &(maze.yWalls[i][j][k].quad.vertices[0]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*k;
-					pVertex->u = 0.0;
-					pVertex->v = 0.0;
-					pVertex = &(maze.yWalls[i][j][k].quad.vertices[1]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*(k+1);
-					pVertex->u = 1.0;
-					pVertex->v = 0.0;
-					pVertex = &(maze.yWalls[i][j][k].quad.vertices[2]);
-					pVertex->x = maze.cellSize*(i+1);
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*(k+1);
-					pVertex->u = 1.0;
-					pVertex->v = 1.0;
-					pVertex = &(maze.yWalls[i][j][k].quad.vertices[3]);
-					pVertex->x = maze.cellSize*(i+1);
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*k;
-					pVertex->u = 0.0;
-					pVertex->v = 1.0;
-				}
-				if (i < maze.w && j < maze.h) {	// zWall:
-					maze.zWalls[i][j][k].state = (k == 0 || k == maze.d) ? outerWallState : Wall::UNINITIALIZED;
-					// debugMsg("z: %d", maze.zWalls[i][j][k].state); d(4);
-					pVertex = &(maze.zWalls[i][j][k].quad.vertices[0]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*k;
-					pVertex->u = 0.0;
-					pVertex->v = 0.0;
-					pVertex = &(maze.zWalls[i][j][k].quad.vertices[1]);
-					pVertex->x = maze.cellSize*i;
-					pVertex->y = maze.cellSize*(j+1);
-					pVertex->z = maze.cellSize*k;
-					pVertex->u = 0.0;
-					pVertex->v = 1.0;
-					pVertex = &(maze.zWalls[i][j][k].quad.vertices[2]);
-					pVertex->x = maze.cellSize*(i+1);
-					pVertex->y = maze.cellSize*(j+1);
-					pVertex->z = maze.cellSize*k;
-					pVertex->u = 1.0;
-					pVertex->v = 1.0;
-					pVertex = &(maze.zWalls[i][j][k].quad.vertices[3]);
-					pVertex->x = maze.cellSize*(i+1);
-					pVertex->y = maze.cellSize*j;
-					pVertex->z = maze.cellSize*k;
-					pVertex->u = 1.0;
-					pVertex->v = 0.0;
-				}
-				// debugMsg("\n");
-				// debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
-			}
-	generateMaze();
-	// debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
+        initWalls(true); // initialize wall vertices and states.
+
+        // debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
 
 	// Now set up our max values for the camera
 	Cam.m_MaxVelocity = maze.wallMargin * 0.5f; //TODO: make this changeable by keyboard
@@ -432,12 +458,11 @@ void SetupWorld()
 	Cam.m_MaxHeadingRate = 5.0f;
 	//Cam.m_PitchDegrees = 0.0f;
 	//Cam.m_HeadingDegrees = 0.0f;
-	Cam.m_ForwardVelocity = 0.0f;
-	Cam.m_SidewaysVelocity = 0.0f;
 	//Cam.m_Position.x = 0.0f * maze.cellSize;
 	//Cam.m_Position.y = 1.0f * maze.cellSize;
 	//Cam.m_Position.z = -15.0f * maze.cellSize;
-	maze.ccEntrance.standOutside(maze.entranceWall);
+
+        newMaze();
 
 	ap = new Autopilot();
 	ap->init(maze, Cam);
@@ -1796,15 +1821,15 @@ bool CheckKeys(void) {
 		keysStillDown['L']=FALSE;
 	}
 
-	//if (keysDown['N'] && !keysStillDown['N'])
-	//{
-	//	keysStillDown['N']=TRUE;
-	//	toggleAAPolys();
-	//}
-	//else if (!keysDown['N'])
-	//{
-	//	keysStillDown['N']=FALSE;
-	//}
+	if (keysDown['N'] && !keysStillDown['N'])
+	{
+		keysStillDown['N']=TRUE;
+		newMaze();
+	}
+	else if (!keysDown['N'])
+	{
+		keysStillDown['N']=FALSE;
+	}
 
 	/* Old code from lesson10:
 	if (keysDown[VK_UP])

@@ -1,5 +1,6 @@
  * To do:
  ** get jpg loading to work - will greatly reduce download size.
+ - add 'n' key for new maze
  x test flash when new time - text centered right?
  -q* turn off mouse pointer when mouse grabbing
  - make a status bar ... maybe a rectangle in lower middle, which shows status of toggles
