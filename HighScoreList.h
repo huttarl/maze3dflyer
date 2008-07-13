@@ -12,7 +12,7 @@ class HighScoreList {
    map<string, float>::iterator p;
 public:
    // Add new score, if it is a new record, for the given dims.
-   // dims = 'wxhxdxs'. t = time in seconds, to the nearest 100th.
+   // dims = 'wxhxd/s'. t = time in seconds, to the nearest 100th.
    // Return true if new record established.
    bool addScore(char *dims, float t);
    bool addScore(Maze3D &maze);
@@ -29,6 +29,8 @@ public:
    }
    // return pointer to a static buffer with a display of scores
    char *toString(Maze3D &maze);
+
+   static void complexityStats(void);
 };
 
 extern HighScoreList highScoreList;

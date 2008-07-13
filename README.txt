@@ -31,18 +31,19 @@ Home/End: go to maze entrance/exit
 
 Shift: toggle higher speed
 N: generate new maze
-M or mouse-click: toggle mouse grab
+M or mouse-click: toggle mouse grab*
 T: toggle display of framerate
 L: toggle display of best score list (arrow shows current maze config)
 F1: toggle full-screen mode
 
-F: cycle texture filter mode
-C: toggle collision checking (allow passing through walls or not)
+F: cycle texture filter mode*
+C: toggle collision checking (allow passing through walls or not)*
 Space: stop and snap camera position/orientation to grid
-Enter: toggle autopilot (not yet implemented)
+Enter: toggle autopilot (not yet implemented)*
 P: show path from entrance to exit (not yet implemented)
 
-Esc: exit
+*The state of these settings will be reflected in a future status bar
+along bottom of window.
 
 
 High scores:

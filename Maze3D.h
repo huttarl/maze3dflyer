@@ -21,6 +21,8 @@ public:
 	// The maze will branch out as much as possible up to branchClustering branches; after that, the
 	// likelihood decreases. Suggested range 1-6.
 	int branchClustering;
+        // Number of cells, after maze generation, that are passage.
+        int numPassageCells;
 	// size of one cell in world coordinates. Some code might depend on cellSize = 1.0
 	const static float cellSize;
 	// margin around walls that we can't collide with; should be << cellSize.
