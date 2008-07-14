@@ -20,6 +20,10 @@ Maze3D::Maze3D(int _w, int _h, int _d, int _s, int _b) {
    //wallMargin = 0.11f;
    //checkCollisions = true;
    //exitRot = 0.0f;
+   cells = NULL;
+   xWalls = NULL;
+   yWalls = NULL;
+   zWalls = NULL;
 }
 
 // setDim should be called only before SetupWorld().
