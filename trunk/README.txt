@@ -71,7 +71,8 @@ WxHxD/s: maze dimensions and sparsity. Higher sparsity gives more space between 
 -r: random size and sparsity for maze
 -b #: branch clustering. Higher numbers, up to 6, cause branching to occur more evenly throughout the maze. Default: 2.
 -f: full-screen mode
-Example: maze3dflyer 5x5x12/2 -f
+-h: do not show help text initially
+Example: maze3dflyer -h 5x5x12/2 -f
 
 (c) 2008 by Lars Huttar
 email: huttar dot net, username is lars

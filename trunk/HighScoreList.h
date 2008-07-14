@@ -28,7 +28,7 @@ public:
       return buf;
    }
 
-   static char *formatTime(float t);
+   static char *formatTime(float t, bool rightJustify = true);
    // return pointer to a static buffer with a display of scores
    char *toString(Maze3D &maze);
 

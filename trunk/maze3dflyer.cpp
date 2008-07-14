@@ -928,11 +928,12 @@ char *statusText(void) {
    char *dims = highScoreList.dims(maze);
    float scoreToBeat = highScoreList.getHighScore(dims);
 
-   sprintf(buf, "Maze size: %s.  Passages: %d.  Best time: %s.     %s %s %s",
+   sprintf(buf, "Maze size: %s.  Passages: %d.  Best time: %s.     %s %s %s %s",
       dims, maze.numPassageCells,
-      HighScoreList::formatTime(scoreToBeat),
+      HighScoreList::formatTime(scoreToBeat, false),
       mouseGrab ? "[M]" : "",
       maze.checkCollisions ? "[C]" : "",
+      highSpeed ? "[H]" : "",
       autopilotMode ? "[P]" : "");
    // debugMsg("statusText: %s\n", buf);
    return buf;
@@ -1613,6 +1614,8 @@ void handleArgs(int argc, LPWSTR *argv) {
                debugMsg("Random maze size: %dx%dx%d/%d\n",
                   maze.w, maze.h, maze.d, maze.sparsity);
                continue;
+            case 'h':
+               showHelp = false;
          }
       }
       debugMsg("Unrecognized command-line option: %s\n", argv[i]);
