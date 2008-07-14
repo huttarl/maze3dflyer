@@ -49,6 +49,7 @@ public:
         void Maze3D::setDim(int _w = 8, int _h = 8, int _d = 8, int _s = 3, int _b = 2);
 
         bool Maze3D::IsInside(glPoint position);
+        inline int volume() { return w * h * d; }
 };
 
 extern Maze3D maze;

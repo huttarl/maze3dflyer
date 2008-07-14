@@ -1,11 +1,12 @@
  * To do:
  ** get jpg loading to work - will greatly reduce download size.
- - add 'n' key for new maze
+ x add 'n' key for new maze
  x test flash when new time - text centered right?
- -q* turn off mouse pointer when mouse grabbing
- - make a status bar ... maybe a rectangle in lower middle, which shows status of toggles
+ xq* turn off mouse pointer when mouse grabbing
+ x make a status bar ... maybe a rectangle in lower middle, which shows status of toggles
    esp. those that aren't otherwise visible.
-   For now, prob just letters or words.
+   For now, prob just letters or words. Later, icons for booleans?
+   Also show wxdxh/s, and num of passage cells. (Maybe time to beat?)
  **x have a slower speed setting for when you're navigating the maze. E.g. CTRL to toggle speeds.
    This would affect keyAccel? no, MaxVelocity.
  - In 2.0... have a more urgent mode (maybe just one of multiple modes) where you have no choice
@@ -19,7 +20,7 @@
       - so you'd keep separate scores for game mode than for single-maze mode
     - bread crumbs is an ability you gain after a certain level
     - maybe other "powerups"?
- *- add better effect when you solve maze, e.g. flash screen
+ *x add better effect when you solve maze, e.g. flash screen
  *x display high scores (for each w/h/d/s combo?) 
      x data structure - dictionary? (w/h/d/s -> min time)
 	 x save high scores to file

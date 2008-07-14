@@ -39,8 +39,8 @@ F1: toggle full-screen mode
 F: cycle texture filter mode*
 C: toggle collision checking (allow passing through walls or not)*
 Space: stop and snap camera position/orientation to grid
-Enter: toggle autopilot (not yet implemented)*
-P: show path from entrance to exit (not yet implemented)
+P: toggle autopilot (not yet implemented)*
+???: show path from entrance to exit (not yet implemented)
 
 *The state of these settings will be reflected in a future status bar
 along bottom of window.
@@ -68,6 +68,7 @@ Command line options:
 
 WxHxD: maze dimensions, in cells. Default: 8x8x8. Max: 20x20x20.
 WxHxD/s: maze dimensions and sparsity. Higher sparsity gives more space between passages. Default: 3.
+-r: random size and sparsity for maze
 -b #: branch clustering. Higher numbers, up to 6, cause branching to occur more evenly throughout the maze. Default: 2.
 -f: full-screen mode
 Example: maze3dflyer 5x5x12/2 -f

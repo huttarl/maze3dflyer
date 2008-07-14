@@ -69,7 +69,7 @@ HGLRC		hRC=NULL;		// Permanent Rendering Context
 HWND		hWnd=NULL;		// Holds Our Window Handle
 HINSTANCE	hInstance;		// Holds The Instance Of The Application
 
-GLuint	helpDL, fpsDL, timeDL, scoreListDL, facadeDL; // display list ID's
+GLuint	helpDL, fpsDL, timeDL, statusDL, scoreListDL, facadeDL; // display list ID's
 
 const float piover180 = 0.0174532925f;
 int xRes = 1024;
@@ -83,8 +83,8 @@ bool	active = true;		// Window Active Flag Set To TRUE By Default
 bool	fullscreen = false;	// Fullscreen Flag Set To Fullscreen Mode By Default
 bool	blend = false;		// Blending ON/OFF
 bool	autopilotMode = false;		// autopilotMode on?
-bool	mouseGrab = false;		// mouse centering is on?
-bool	showFPS = false, showScores = false; // whether to display framerate or score list
+bool	mouseGrab = true;		// mouse centering is on?
+bool	showFPS = false, showScores = false, showStatus = true; // whether to display framerate or score list
 bool	showHelp = true;		// show help text
 bool    celebrating = false;      // showing solved-maze effect?
 bool    highSpeed = false;      // high-speed mode
@@ -135,6 +135,7 @@ M or left-click: toggle mouse grab\n\
 Shift: toggle high speed\n\
 T: toggle frames-per-second display\n\
 L: toggle display of best score list (arrow shows current maze config)\n\
+U: toggle status bar display\n\
 F1: toggle full-screen mode";
 
 const int howLongShowSolved = 5; // for how many do we display "SOLVED"?
@@ -314,10 +315,6 @@ void generateMaze()
 
 	delete [] queue;
 
-
-        debugMsg("numPassageCells: %d of %d//%d. Prediction %d\n", maze.numPassageCells, maze.w * maze.h * maze.d, maze.sparsity,
-           maze.w * maze.h * maze.d / (maze.sparsity * maze.sparsity));
-
         HighScoreList::complexityStats();
 }
 
@@ -440,20 +437,30 @@ void initCellsWalls(bool initVertices = true) {
 void newMaze() {
    initCellsWalls(false);
    generateMaze();
-   Cam.m_ForwardVelocity = 0.0f;
-   Cam.m_SidewaysVelocity = 0.0f;
-   maze.ccEntrance.standOutside(maze.entranceWall);
+}
+
+void freeResources() {
+	delete [] maze.cells;
+	delete [] maze.xWalls;
+	delete [] maze.yWalls;
+	delete [] maze.zWalls;
 }
 
 void SetupWorld()
 {
    maze.exitRot = 0.0f;
 
+   // free walls and cells in case this is a second time.
+   // remember, delete operator on a null pointer has no effect.
+   delete [] maze.cells;
+   delete [] maze.xWalls;
+   delete [] maze.yWalls;
+   delete [] maze.zWalls;
+
    // allocate wall arrays
    maze.xWalls = new Wall[maze.w+1][Maze3D::hMax][Maze3D::dMax];
    maze.yWalls = new Wall[maze.w][Maze3D::hMax+1][Maze3D::dMax];
    maze.zWalls = new Wall[maze.w][Maze3D::hMax][Maze3D::dMax+1];
-
    // allocate cell arrays
    maze.cells = new Cell[maze.w][Maze3D::hMax][Maze3D::dMax];
 
@@ -464,16 +471,19 @@ void SetupWorld()
    // Now set up our max values for the camera
    Cam.m_MaxVelocity = maze.wallMargin * 0.5f; //TODO: make this changeable by keyboard
    Cam.m_MaxAccel = Cam.m_MaxVelocity * 0.5f;
-   Cam.m_MaxPitchRate = 5.0f;
+   Cam.m_MaxPitchRate = 2.0f;
    Cam.m_MaxPitch = 89.9f;
-   Cam.m_MaxHeadingRate = 5.0f;
+   Cam.m_MaxHeadingRate = 2.0f;
    //Cam.m_PitchDegrees = 0.0f;
    //Cam.m_HeadingDegrees = 0.0f;
    //Cam.m_Position.x = 0.0f * maze.cellSize;
    //Cam.m_Position.y = 1.0f * maze.cellSize;
    //Cam.m_Position.z = -15.0f * maze.cellSize;
+   Cam.m_ForwardVelocity = 0.0f;
+   Cam.m_SidewaysVelocity = 0.0f;
 
    newMaze();
+   maze.ccEntrance.standOutside(maze.entranceWall);
 
    ap = new Autopilot();
    ap->init(maze, Cam);
@@ -698,6 +708,8 @@ GLvoid createTextDLs(GLuint DL, bool variableSpaced, const char *fmt, ...)
    }
    else if (DL == scoreListDL) // position of score list
       x = xRes - 9*31 + 20, y = lineHeight; // was x = xRes / 2 - 9*14 + 10, y = yRes / 4;
+   else if (DL == statusDL) // position of status bar
+      x = xRes / 2 - 9*strlen(text)/2, y = yRes - lineHeight/2 + 2;
    else x=0, y=0; // default, unused
 
    glNewList(DL, GL_COMPILE);
@@ -904,11 +916,27 @@ void celebrateSolution() {
 
    celebrating = true;
 
+   // Maybe someday use:
    //// Thanks to Jakub at http://www.allegro.cc/forums/thread/535015 for screen-copying code:
    //glBindTexture(GL_TEXTURE_2D, effectTexture);
    //glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, SCREEN_W, SCREEN_H);
 }
-// see http://bytes.com/forum/post832171-3.html regarding CLOCKS_PER_SEC and clock_t type.
+
+
+char *statusText(void) {
+   static char buf[1024];
+   char *dims = highScoreList.dims(maze);
+   float scoreToBeat = highScoreList.getHighScore(dims);
+
+   sprintf(buf, "Maze size: %s.  Passages: %d.  Best time: %s.     %s %s %s",
+      dims, maze.numPassageCells,
+      HighScoreList::formatTime(scoreToBeat),
+      mouseGrab ? "[M]" : "",
+      maze.checkCollisions ? "[C]" : "",
+      autopilotMode ? "[P]" : "");
+   // debugMsg("statusText: %s\n", buf);
+   return buf;
+}
 
 // Draw any needed text.
 // Does not preserve any previous projection.
@@ -940,6 +968,7 @@ void drawText()
         createTextDLs(timeDL, true, solvingStatus);
 
 	++frames;
+        // see http://bytes.com/forum/post832171-3.html regarding CLOCKS_PER_SEC and clock_t type.
 	// To update framerate more frequently, lower the right-hand side to e.g. (CLOCKS_PER_SEC / 2)
 	if(time_now - last_time > CLOCKS_PER_SEC / 8) {
 		// Calculate frames per second
@@ -955,6 +984,8 @@ void drawText()
 		frames = 0;
 	}
 
+        if (showStatus) createTextDLs(statusDL, true, statusText());
+
 	// Thanks to: http://glprogramming.com/red/chapter08.html#name1
 	// and http://www.lighthouse3d.com/opengl/glut/index.php?bmpfontortho
 	setOrthographicProjection();
@@ -964,10 +995,9 @@ void drawText()
 	if (showFPS) glCallList(fpsDL);
 	if (showHelp) glCallList(helpDL);
         if (showScores) glCallList(scoreListDL);
-        //TODO: clip score list to (smaller) rectangle
         //TODO: scroll score list if too large
-
         glCallList(timeDL);
+        if (showStatus) glCallList(statusDL);
 
 	glPopMatrix();
 	resetPerspectiveProjection();	
@@ -1018,7 +1048,8 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
 	helpDL = glGenLists(5);
 	fpsDL = helpDL + 1;
         timeDL = fpsDL + 1;
-        scoreListDL = timeDL + 1;
+        statusDL = timeDL + 1;
+        scoreListDL = statusDL + 1;
 
 	// Initialize the help display list. The FPS DL is recreated every time FPS is calculated.
 	createTextDLs(helpDL, true, helpText);
@@ -1382,6 +1413,7 @@ BOOL CreateGLWindow(char* title, int width, int height, int bits, bool fullscree
 	{
 		dwExStyle=WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;			// Window Extended Style
 		dwStyle=WS_OVERLAPPEDWINDOW;							// Windows Style
+		ShowCursor(!mouseGrab);										// Hide Mouse Pointer
 	}
 
 	AdjustWindowRectEx(&WindowRect, dwStyle, FALSE, dwExStyle);		// Adjust Window To True Requested Size
@@ -1539,19 +1571,13 @@ LRESULT CALLBACK WndProc(	HWND	hWnd,			// Handle For This Window
 		case WM_LBUTTONDOWN:				// Did We Receive A Left Mouse Click?
 		{
 			mouseGrab = !mouseGrab; // toggle mouse steering
+                        ShowCursor(!mouseGrab); // Hide pointer when mouse grabbed
 			return 0;
 		}
 	}
 
 	// Pass All Unhandled Messages To DefWindowProc
 	return DefWindowProc(hWnd,uMsg,wParam,lParam);
-}
-
-void freeResources() {
-	delete [] maze.cells;
-	delete [] maze.xWalls;
-	delete [] maze.yWalls;
-	delete [] maze.zWalls;
 }
 
 void handleArgs(int argc, LPWSTR *argv) {
@@ -1577,6 +1603,15 @@ void handleArgs(int argc, LPWSTR *argv) {
                continue;
             case 'b':
                maze.branchClustering = _wtoi(argv[++i]);
+               continue;
+            case 'r':
+               srand((int)time(0));
+               maze.w = (rand() % 5) + (rand() % 5) + 2;
+               maze.h = (rand() % 5) + (rand() % 5) + 2;
+               maze.d = (rand() % 5) + (rand() % 5) + 2;
+               maze.sparsity = rand() % 2 + 2;
+               debugMsg("Random maze size: %dx%dx%d/%d\n",
+                  maze.w, maze.h, maze.d, maze.sparsity);
                continue;
          }
       }
@@ -1741,15 +1776,15 @@ bool CheckKeys(void) {
 		keysStillDown['B']=FALSE;
 	}
 
-	if (keysDown[VK_RETURN] && !keysStillDown[VK_RETURN])
+	if (keysDown['P'] && !keysStillDown['P'])
 	{
 		// toggle autopilotMode
-		keysStillDown[VK_RETURN]=TRUE;
+		keysStillDown['P']=TRUE;
 		setAutopilotMode(!autopilotMode);
 	}
-	else if (!keysDown[VK_RETURN])
+	else if (!keysDown['P'])
 	{
-		keysStillDown[VK_RETURN]=FALSE;
+		keysStillDown['P']=FALSE;
 	}
 
 	if (keysDown['M'] && !keysStillDown['M'])
@@ -1781,6 +1816,11 @@ bool CheckKeys(void) {
 		keysStillDown[VK_SHIFT]=TRUE;
 		highSpeed = !highSpeed;
                 Cam.m_MaxVelocity = maze.wallMargin * (highSpeed ? 1.0 : 0.5);
+                //Cam.m_MaxHeadingRate = 
+                //   Cam.m_MaxPitchRate =
+                Cam.m_MaxPitchRate = (highSpeed ? 5.0 : 2.0);
+                Cam.m_MaxHeadingRate = (highSpeed ? 5.0 : 2.0);
+
 	}
 	else if (!keysDown[VK_SHIFT])
 	{
@@ -1818,6 +1858,17 @@ bool CheckKeys(void) {
 	else if (!keysDown['T'])
 	{
 		keysStillDown['T']=FALSE;
+	}
+
+        // 'U' key: toggle status bar display
+	if (keysDown['U'] && !keysStillDown['U']) {
+		keysStillDown['U']=TRUE;
+		showStatus = !showStatus;
+		// if (showFPS) showHelp = false;
+	}
+	else if (!keysDown['U'])
+	{
+		keysStillDown['U']=FALSE;
 	}
 
 	// 'l' key: toggle score list display

@@ -17,7 +17,7 @@ bool HighScoreList::addScore(char *dims, float t) {
 }
 
 bool HighScoreList::addScore(Maze3D &maze) {
-   return addScore(makeDims(maze), ((maze.lastSolvedTime + 0.0) / CLOCKS_PER_SEC));
+   return addScore(dims(maze), ((maze.lastSolvedTime + 0.0) / CLOCKS_PER_SEC));
 }
 
 // get high score for a given map dimension
@@ -48,19 +48,27 @@ bool HighScoreList::save(void) {
    return true;
 }
 
+char *HighScoreList::formatTime(float t) {
+   static char buf[20];
+   int minutes;
+   if (t < 0.0) return "n/a";
+   else {
+      minutes = t / 60.0;
+      sprintf(buf, "%6d:%05.2f", minutes, t - (minutes * 60.0));
+      return buf;
+   }
+}
+
 char *HighScoreList::toString(Maze3D &maze) {
    static char buf[2048], line[30];
-   int chars = 0, minutes;
-   float seconds;
-   char *curDims = makeDims(maze);
+   int chars = 0;
+   char *curDims = dims(maze);
    char *s = buf + sprintf(buf, "     Maze size:   Best time:\n\n");
 
    for (p = highScoreMap.begin(); p != highScoreMap.end(); p++) {
-      minutes = p->second / 60.0;
-      seconds = p->second - (minutes * 60.0);
-      chars = sprintf(line, "%s%11s %6d:%05.2f\n",
+      chars = sprintf(line, "%s%11s %s\n",
          !strcmp(p->first.c_str(), curDims) ? "-> " : "   ",
-         p->first.c_str(), minutes, seconds);
+         p->first.c_str(), formatTime(p->second));
       if (chars > 0) {
          if (s - buf + chars >= sizeof(buf)) {
             debugMsg("Line '%s' would overflow high score list buffer! %d >= %d\n",
@@ -121,8 +129,9 @@ void HighScoreList::complexityStats(void) {
          debugMsg("Can't open output file %s\n", fn);
          return;
       }
-      fp << "numPassageCells: " << maze.numPassageCells << " of " << volume << "//" << maze.sparsity << ". Prediction: " << 
-         volume / (maze.sparsity * maze.sparsity) << endl;
+      fp << "numPassageCells: " << maze.numPassageCells << " of " << volume <<
+         " (" << maze.w << "x" << maze.h << "x" << maze.d << "/" << maze.sparsity << "). Prediction: " << 
+         int(((maze.sparsity - 1) * 3) * (volume + 0.0) / (maze.sparsity * maze.sparsity * maze.sparsity)) << endl;
    }
 }
 
