@@ -48,13 +48,13 @@ bool HighScoreList::save(void) {
    return true;
 }
 
-char *HighScoreList::formatTime(float t) {
+char *HighScoreList::formatTime(float t, bool rightJustify) {
    static char buf[20];
    int minutes;
    if (t < 0.0) return "n/a";
    else {
       minutes = t / 60.0;
-      sprintf(buf, "%6d:%05.2f", minutes, t - (minutes * 60.0));
+      sprintf(buf, rightJustify ? "%6d:%05.2f" : "%d:%05.2f", minutes, t - (minutes * 60.0));
       return buf;
    }
 }
