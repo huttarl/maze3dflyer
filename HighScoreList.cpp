@@ -17,7 +17,7 @@ bool HighScoreList::addScore(char *dims, float t) {
 }
 
 bool HighScoreList::addScore(Maze3D &maze) {
-   return addScore(dims(maze), ((maze.lastSolvedTime + 0.0) / CLOCKS_PER_SEC));
+   return addScore(dims(maze, true), ((maze.lastSolvedTime + 0.0) / CLOCKS_PER_SEC));
 }
 
 // get high score for a given map dimension
@@ -62,9 +62,10 @@ char *HighScoreList::formatTime(float t, bool rightJustify) {
 char *HighScoreList::toString(Maze3D &maze) {
    static char buf[2048], line[30];
    int chars = 0;
-   char *curDims = dims(maze);
+   char *curDims = dims(maze, true);
    char *s = buf + sprintf(buf, "     Maze size:   Best time:\n\n");
 
+   //TODO: order these by complexity or something.
    for (p = highScoreMap.begin(); p != highScoreMap.end(); p++) {
       chars = sprintf(line, "%s%11s %s\n",
          !strcmp(p->first.c_str(), curDims) ? "-> " : "   ",
