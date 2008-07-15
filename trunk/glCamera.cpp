@@ -7,6 +7,9 @@
 #include "maze3dflyer.h"
 #include "glCamera.h"
 
+#ifndef M_PI
+#define M_PI       3.14159265358979323846
+#endif // M_PI
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -300,4 +303,26 @@ void glCamera::GoTo(GLfloat nx, GLfloat ny, GLfloat nz, GLfloat npitch, GLfloat 
 	m_HeadingDegrees= nheading;	
         m_ForwardVelocity = 0.0;
         m_SidewaysVelocity = 0.0;
+}
+
+// position camera so as to take in most or all of maze
+void glCamera::StandBack(float w, float h, float d, float cellSize) {
+   float m = max(w, max(h, d));
+   float x = -1 - m * 0.3, y = h + m * 0.1, z = -1 - m * 0.3;
+   m_Position.x = x * cellSize;
+   m_Position.y = y * cellSize;
+   m_Position.z = -z * cellSize;
+
+   // "look-at" point: midpoint of maze, but aim a little higher so we can see horizon
+   float dx = (x - w*0.5);
+   float dy = (y - h*0.63);
+   float dz = (z - d*0.5);
+   float d2 = sqrt(dx*dx + dz*dz);
+   float d3 = sqrt(dx*dx + dy*dy + dz*dz);
+   m_PitchDegrees = asin(dy / d3) * (180.0 / M_PI);
+   d2 = (d2 + abs(dx) * sqrt(2.0)) / 2; // soften heading adjustment
+   m_HeadingDegrees = 270 - acos(dx / d2) * (180.0 / M_PI);
+   // GoTo(x, y, -z, 45.0 - m, 135.0 + (d - w) * 3.0);
+   debugMsg("dx: %2.2f, d2: %2.2f\n", dx, d2);
+   debugMsg("pitch: %2.2f, heading: %2.2f\n", m_PitchDegrees, m_HeadingDegrees);
 }

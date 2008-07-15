@@ -20,15 +20,15 @@ typedef struct tagQUAD
 
 class Wall {
 public:
-	enum WallState { UNINITIALIZED, OPEN, CLOSED } state;
-	// outsidePositive: true if "outside" of face is in positive axis direction.
-	// only applies to CLOSED walls.
-	bool outsidePositive;
-	Quad quad;
-	Wall() { state = UNINITIALIZED; outsidePositive = false; }
+   enum WallState { UNINITIALIZED, OPEN, CLOSED } state;
+   // outsidePositive: true if "outside" of face is in positive axis direction.
+   // only applies to CLOSED walls.
+   bool outsidePositive;
+   Quad quad;
+   Wall() { state = UNINITIALIZED; outsidePositive = false; }
 
-	void Wall::draw(char dir);
-	void Wall::drawExit(int x, int y, int z, bool isEntrance);
+   void Wall::draw(char dir);
+   void Wall::drawExit(int x, int y, int z, bool isEntrance);
 };
 
 #endif /* __Wall_h__ */
