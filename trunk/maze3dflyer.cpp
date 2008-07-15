@@ -939,16 +939,16 @@ char *statusText(void) {
    char *dims = highScoreList.dims(maze);
    float scoreToBeat = highScoreList.getHighScore(dims);
 
-   sprintf(buf, "Maze size: %s.  Passages: %d.  Best time: %s.   %s %s %s %s %s <%d %d %d>",
+   sprintf(buf, "Maze size: %s.  Passages: %d.  Best time: %s.   %s %s %s %s %s", //  <%d %d %d>
       dims, maze.numPassageCells,
       HighScoreList::formatTime(scoreToBeat, false),
       mouseGrab ? "[M]" : "",
       maze.checkCollisions ? "" : "[C]", // hide from beginners
       highSpeed ? "[H]" : "",
       drawOutline ? "[G]" : "",
-      autopilotMode ? "[P]" : "",
+      autopilotMode ? "[P]" : ""
       //debugging:
-      int(Cam.m_Position.x), int(Cam.m_Position.y), int(Cam.m_Position.z)
+      // , int(Cam.m_Position.x), int(Cam.m_Position.y), int(Cam.m_Position.z)
       );
    // debugMsg("statusText: %s\n", buf);
    return buf;

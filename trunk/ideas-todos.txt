@@ -24,6 +24,7 @@
     - bread crumbs is an ability you gain after a certain level
     - maybe other "powerups"?
     - change skybox at each level or each few levels
+      - requires proper jpg loading
  *x add better effect when you solve maze, e.g. flash screen
  *x display high scores (for each w/h/d/s combo?) 
      x data structure - dictionary? (w/h/d/s -> min time)

@@ -34,6 +34,8 @@ N: generate new maze
 M or mouse-click: toggle mouse grab*
 T: toggle display of framerate
 L: toggle display of best score list (arrow shows current maze config)
+U: toggle status bar display
+G: toggle maze outline
 F1: toggle full-screen mode
 
 F: cycle texture filter mode*

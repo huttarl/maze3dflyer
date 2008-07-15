@@ -22,9 +22,16 @@ public:
    char *filepath;
    HighScoreList() { filepath = "maze3dflyer_scores.txt"; }
    // makeDims: convert the maze parameters to a single string
-   static char *dims(Maze3D &maze) {
+   static char *dims(Maze3D &maze, bool normalize = false) {
       static char buf[16];
-      sprintf(buf, "%dx%dx%d/%d", maze.w, maze.h, maze.d, maze.sparsity);
+      int i = maze.w, j = maze.h, k = maze.d;
+      // sort dimensions by size, so that 6x2x10 has the same best score slot as 10x6x2.
+      if (normalize) {
+         if (i < j) swap(i, j);
+         if (j < k) swap(j, k);
+         if (i < j) swap(i, j);
+      }
+      sprintf(buf, "%dx%dx%d/%d", i, j, k, maze.sparsity);
       return buf;
    }
 
