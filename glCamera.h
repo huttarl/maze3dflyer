@@ -49,6 +49,7 @@ public:
 	void MoveSideways(GLfloat distance);
 	void ChangeHeading(GLfloat degrees);
 	void ChangePitch(GLfloat degrees);
+        void StandBack(float w, float h, float d, float cellSize);
         void ApplyFriction(void);
 	void SetPerspective(void);
 	void SnapToGrid(void);

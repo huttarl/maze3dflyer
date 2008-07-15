@@ -51,6 +51,7 @@
 #endif
 
 void setAutopilotMode(bool newAPM);
+void SetupWorld(void);
 
 // Maze::collide?
 /* Return true iff moving from point p along vector v would collide with a wall. */
@@ -86,6 +87,7 @@ bool	autopilotMode = false;		// autopilotMode on?
 bool	mouseGrab = true;		// mouse centering is on?
 bool	showFPS = false, showScores = false, showStatus = true; // whether to display framerate or score list
 bool	showHelp = true;		// show help text
+bool    drawOutline = true;
 bool    celebrating = false;      // showing solved-maze effect?
 bool    highSpeed = false;      // high-speed mode
 
@@ -136,6 +138,7 @@ Shift: toggle high speed\n\
 T: toggle frames-per-second display\n\
 L: toggle display of best score list (arrow shows current maze config)\n\
 U: toggle status bar display\n\
+G: toggle maze outline\n\
 F1: toggle full-screen mode";
 
 const int howLongShowSolved = 5; // for how many do we display "SOLVED"?
@@ -170,7 +173,8 @@ void errorMsg(const char *str, ...)
 static int nic=0; // CellCoord
 static int nc=0; // Cell
 static int nw=0; // Wall
-static bool firstTime = true; // for debugging
+
+bool firstTime = true; // for debugging
 
 
 LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);	// Declaration For WndProc
@@ -439,11 +443,18 @@ void newMaze() {
    generateMaze();
 }
 
+void nextLevel() {
+   maze.randomizeDims();
+   SetupWorld();
+}
+
+
 void freeResources() {
-	delete [] maze.cells;
-	delete [] maze.xWalls;
-	delete [] maze.yWalls;
-	delete [] maze.zWalls;
+   delete [] maze.cells;
+   delete [] maze.xWalls;
+   delete [] maze.yWalls;
+   delete [] maze.zWalls;
+   delete ap;
 }
 
 void SetupWorld()
@@ -483,7 +494,7 @@ void SetupWorld()
    Cam.m_SidewaysVelocity = 0.0f;
 
    newMaze();
-   maze.ccEntrance.standOutside(maze.entranceWall);
+   Cam.StandBack(maze.w, maze.h, maze.d, maze.cellSize);
 
    ap = new Autopilot();
    ap->init(maze, Cam);
@@ -928,13 +939,17 @@ char *statusText(void) {
    char *dims = highScoreList.dims(maze);
    float scoreToBeat = highScoreList.getHighScore(dims);
 
-   sprintf(buf, "Maze size: %s.  Passages: %d.  Best time: %s.     %s %s %s %s",
+   sprintf(buf, "Maze size: %s.  Passages: %d.  Best time: %s.   %s %s %s %s %s <%d %d %d>",
       dims, maze.numPassageCells,
       HighScoreList::formatTime(scoreToBeat, false),
       mouseGrab ? "[M]" : "",
-      maze.checkCollisions ? "[C]" : "",
+      maze.checkCollisions ? "" : "[C]", // hide from beginners
       highSpeed ? "[H]" : "",
-      autopilotMode ? "[P]" : "");
+      drawOutline ? "[G]" : "",
+      autopilotMode ? "[P]" : "",
+      //debugging:
+      int(Cam.m_Position.x), int(Cam.m_Position.y), int(Cam.m_Position.z)
+      );
    // debugMsg("statusText: %s\n", buf);
    return buf;
 }
@@ -1037,11 +1052,13 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
 	glDepthFunc(GL_LESS);								// The Type Of Depth Test To Do
 	glEnable(GL_DEPTH_TEST);							// Enables Depth Testing
 	glShadeModel(GL_SMOOTH);							// Enables Smooth Color Shading
+        glEnable(GL_LINE_SMOOTH); // enable line antialiasing - for outline
+        glLineWidth(1.0); // for outline. 1 is default anyway.
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
 
 	quadric = gluNewQuadric();			// create a quadric object for cylinders, discs, etc.
 	gluQuadricNormals(quadric, GLU_SMOOTH);	// Create Smooth Normals ( NEW )
-	gluQuadricTexture(quadric, GL_TRUE);		// Create Texture Coords ( NEW )
+	// gluQuadricTexture(quadric, GL_TRUE);		// Create Texture Coords ( NEW )
 
 	SetupWorld();
 
@@ -1154,7 +1171,7 @@ void celebrationEffect() {
    if (flashCount > 3 * scaleFactor) return; // don't flash quite as long as we display score
    // ramp alpha from max down to 0; alternate ramp with 0 (full transparency).
    float alpha = ((flashCount + 1) % 2) * maxAlpha * (howLongShowSolved * scaleFactor - flashCount) / (howLongShowSolved * scaleFactor);
-   debugMsg("flashCount: %d; alpha: %f\n", flashCount, alpha);
+   // debugMsg("flashCount: %d; alpha: %f\n", flashCount, alpha);
 
    // Thanks to http://steinsoft.net/index.php?site=Programming/Code%20Snippets/OpenGL/no1 for this idea:
    // Draw a quad in front of the camera and modulate its transparency.
@@ -1162,6 +1179,7 @@ void celebrationEffect() {
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    glEnable(GL_BLEND);
    glDisable(GL_DEPTH_TEST);
+   glBindTexture(GL_TEXTURE_2D, GL_NONE);    // no texture
 
    glBegin(GL_QUADS);
       //glColor4f(0.8f, 0.8f, 1.0f, alpha);
@@ -1282,17 +1300,18 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 
 	glEnd();
 
+        if (drawOutline) maze.drawOutline();
+
 	// display entrance/exit (may mess up rot/transf matrix)
 	maze.ccEntrance.drawExit(maze.entranceWall, true);
 	maze.ccExit.drawExit(maze.exitWall, false);
 
         // if just solved the maze, flash the screen
-        if (celebrating)
-           celebrationEffect();
+        if (celebrating) celebrationEffect();
 
-	drawText();											// draw any needed screen text, such as FPS
+	drawText(); // draw any needed screen text, such as FPS
 
-	firstTime = false;									// debugging
+	firstTime = false; // debugging
 	return TRUE;										// Everything Went OK
 }
 
@@ -1607,15 +1626,11 @@ void handleArgs(int argc, LPWSTR *argv) {
                continue;
             case 'r':
                srand((int)time(0));
-               maze.w = (rand() % 5) + (rand() % 5) + 2;
-               maze.h = (rand() % 5) + (rand() % 5) + 2;
-               maze.d = (rand() % 5) + (rand() % 5) + 2;
-               maze.sparsity = rand() % 2 + 2;
-               debugMsg("Random maze size: %dx%dx%d/%d\n",
-                  maze.w, maze.h, maze.d, maze.sparsity);
+               maze.randomizeDims();
                continue;
             case 'h':
                showHelp = false;
+               continue;
          }
       }
       debugMsg("Unrecognized command-line option: %s\n", argv[i]);
@@ -1681,6 +1696,8 @@ int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 				if (CheckKeys()) done = true;
 				else CheckMouse();
 				if (autopilotMode) ap->run();
+                                if (celebrating && maze.whenSolved && (clock() - maze.whenSolved >= howLongShowSolved * CLOCKS_PER_SEC))
+                                   nextLevel();
 			}
 		}
 	}
@@ -1872,6 +1889,16 @@ bool CheckKeys(void) {
 	else if (!keysDown['U'])
 	{
 		keysStillDown['U']=FALSE;
+	}
+
+        // 'G' key: toggle outline (edge) drawing
+	if (keysDown['G'] && !keysStillDown['G']) {
+		keysStillDown['G']=TRUE;
+		drawOutline = !drawOutline;
+	}
+	else if (!keysDown['G'])
+	{
+		keysStillDown['G']=FALSE;
 	}
 
 	// 'l' key: toggle score list display

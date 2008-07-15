@@ -1,6 +1,9 @@
  * To do:
+ - could make maxvel increase as we get further from the maze.
+   Going slowly while cruising around empty air is no fun.
+ x change initial view to get a more overall perspective?
+   x user can always hit Home to go to entrance.
  ** get jpg loading to work - will greatly reduce download size.
- x add 'n' key for new maze
  x test flash when new time - text centered right?
  xq* turn off mouse pointer when mouse grabbing
  x make a status bar ... maybe a rectangle in lower middle, which shows status of toggles
@@ -20,6 +23,7 @@
       - so you'd keep separate scores for game mode than for single-maze mode
     - bread crumbs is an ability you gain after a certain level
     - maybe other "powerups"?
+    - change skybox at each level or each few levels
  *x add better effect when you solve maze, e.g. flash screen
  *x display high scores (for each w/h/d/s combo?) 
      x data structure - dictionary? (w/h/d/s -> min time)
@@ -42,18 +46,24 @@
    - resetting timer must remove breadcrumbs
    - a bad guy comes behind you (on higher levels) after a while and eats your bread crumbs!
      - if he touches you, you teleport? back to the entrance?
- - 'n' command to create new maze with current parameters.
+ x 'n' command to create new maze with current parameters.
  - maybe add a "rear view mirror"?
- - big complex mazes will be more "legible" if there is a solid dark line along all outer edges
+ x big complex mazes will be more "legible" if there is a solid dark line along all outer edges
    - maybe a grid, so there are lines even between cells? but not in open space
-   - how to draw so that it's visible, regardless of adjacent walls? make a 4-sided "diamond"-cross-section square prism around the line?
+   x how to draw so that it's visible, regardless of adjacent walls? make a 4-sided "diamond"-cross-section square prism around the line?
      (with width = epsilon) Such a line would also be visible inside the maze.
      - or this: iterate through edge segments;
-       - if current segment is external convex edge, draw external 3 sides of square prism;
-       - if current segment is external concave edge, draw external 1 side of square prism;
+       - if current segment is external-convex edge, draw external 3 sides of square prism;
+       - if current segment is external-concave edge, draw external 1 side of square prism;
        - otherwise, draw nothing (e.g. if current segment borders no walls, or two coplanar walls, or 4 walls)
        - for this purpose, exit/entrance facade counts as a wall?
    - it could be created once as a display list, since the maze never changes.
+   x right now just doing it as lines (not quads)
+   x Lines on concave corners appear only sometimes.
+     Could try a higher line thickness to see if that helps, but don't want them too heavy.
+     Tried it; this doesn't help the concave corners, but it introduces inelegant joints
+     (no line caps / mitres provided). Forget thick lines.
+   x I enabled GL_LINE_SMOOTHING but it didn't seem to work. Ah, had to set blending. works now.
  - ?display directional hint while you're solving maze:
    - red arrow: direction to exit (crow-flies)
    - green: dir to entrance
