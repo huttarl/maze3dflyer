@@ -1,9 +1,24 @@
  * To do:
+ - fade to white at end of level, fade in from white at beginning.
+   - could do texture-loading while faded out!
+ - have a flipped texture mode, where the skybox goes on the maze, and the wall textures go on the skybox!
+   - for that we may need to mipmap the sky textures after all.
+ - might be fun to have bits of animation in the skybox... e.g. twinkling stars (careful to be in the sky!)
+   or shooting stars... a flying bird if not too hard...
  - could make maxvel increase as we get further from the maze.
    Going slowly while cruising around empty air is no fun.
  x change initial view to get a more overall perspective?
    x user can always hit Home to go to entrance.
- ** get jpg loading to work - will greatly reduce download size.
+ x** get jpg loading to work - will greatly reduce download size.
+   X this works (with SOIL) but is slow; possibly due to Y inversion? No, that doesn't seem to make
+     much speed difference. Maybe it's the jpg decompression? could do profiling.
+     Could try using the official library instead of stb's...
+     No, actually the speed is the same regardless of whether we're loading jpgs or bmps. So leave the library alone!
+     I mitigated this with a splash screen before texture loading.
+ - could add a load progress indicator to splash screen, since the delay is in over
+   a dozen segments, each of which is ~1/4 sec. This would let users know they're not just waiting
+   b/c I wanted to make them wait.
+   
  x test flash when new time - text centered right?
  xq* turn off mouse pointer when mouse grabbing
  x make a status bar ... maybe a rectangle in lower middle, which shows status of toggles

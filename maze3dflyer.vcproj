@@ -4,6 +4,7 @@
 	Version="7.10"
 	Name="maze3dflyer"
 	ProjectGUID="{6DABB0A1-12F8-43AF-AEBC-AB8EE3AB3415}"
+	RootNamespace="maze3dflyer"
 	Keyword="Win32Proj">
 	<Platforms>
 		<Platform
@@ -31,9 +32,10 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib glut32.lib"
+				AdditionalDependencies="opengl32.lib glu32.lib glut32.lib SOIL.lib"
 				OutputFile="$(OutDir)/maze3dflyer.exe"
 				LinkIncremental="2"
+				AdditionalLibraryDirectories="$(ProjectDir)/lib"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile="$(OutDir)/maze3dflyer.pdb"
 				SubSystem="2"
@@ -77,9 +79,10 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib glut32.lib"
+				AdditionalDependencies="opengl32.lib glu32.lib glut32.lib SOIL.lib"
 				OutputFile="$(OutDir)/maze3dflyer.exe"
 				LinkIncremental="1"
+				AdditionalLibraryDirectories="$(ProjectDir)/lib"
 				GenerateDebugInformation="TRUE"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -142,9 +145,6 @@
 				RelativePath=".\HighScoreList.cpp">
 			</File>
 			<File
-				RelativePath=".\JPEG.cpp">
-			</File>
-			<File
 				RelativePath=".\Maze3D.cpp">
 			</File>
 			<File
@@ -186,13 +186,13 @@
 				RelativePath=".\HighScoreList.h">
 			</File>
 			<File
-				RelativePath=".\JPEG.h">
-			</File>
-			<File
 				RelativePath=".\Maze3D.h">
 			</File>
 			<File
 				RelativePath=".\maze3dflyer.h">
+			</File>
+			<File
+				RelativePath=".\SOIL.h">
 			</File>
 			<File
 				RelativePath=".\Wall.h">
@@ -208,6 +208,9 @@
 		</Filter>
 		<File
 			RelativePath=".\ideas-todos.txt">
+		</File>
+		<File
+			RelativePath=".\lib\libSOIL.a">
 		</File>
 		<File
 			RelativePath=".\README.txt">
