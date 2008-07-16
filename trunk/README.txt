@@ -35,10 +35,9 @@ M or mouse-click: toggle mouse grab*
 T: toggle display of framerate
 L: toggle display of best score list (arrow shows current maze config)
 U: toggle status bar display
-G: toggle maze outline
+G: toggle maze outline*
 F1: toggle full-screen mode
 
-F: cycle texture filter mode*
 C: toggle collision checking (allow passing through walls or not)*
 Space: stop and snap camera position/orientation to grid
 P: toggle autopilot (not yet implemented)*
@@ -90,3 +89,6 @@ http://hazelwhorley.com/textures.html (Sahara skybox)
 http://www.3dmd.net/
 http://www.stormvisions.com/3DGS/roof1.jpg
 http://www.sharecg.com/
+Fonts:
+Gentium (http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&item_id=Gentium)
+Helvetica

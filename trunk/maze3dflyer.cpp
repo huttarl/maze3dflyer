@@ -8,8 +8,6 @@
 
  *		Also uses quaternion camera class by Vic Hollis:
  *		http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=Quaternion_Camera_Class
- *		JPG loading code (may not be used) by Ronny André Reierstad from APRON tutorials at
- *			http://www.morrowland.com/apron/tut_gl.php
  *
  *		See also http://www.rednebula.com/index.php?page=3dmaze for another 3D maze generation/
  *		display/navigation program (this one is not related to it).
@@ -36,8 +34,10 @@
 #include <gl/glu.h>			// 
 #include <gl/glut.h>		// (glut.h actually includes gl and glu.h, so we're redundant)
 
-// #define USE_JPG // Use BMP format for now instead of JPG. Currently JPG loading has stripey problems.
+// #define USE_JPG // Use BMP format or JPG?
+
 #define DEBUGGING 1
+#define PROFILING 1 // enable some profiling
 
 #include "maze3dflyer.h"
 #include "Wall.h"
@@ -46,9 +46,10 @@
 #include "Autopilot.h"
 #include "HighScoreList.h"
 #include "glCamera.h"
-#ifdef USE_JPG
-#   include "jpeg.h"
-#endif
+//#ifdef USE_JPG
+//#   include "jpeg.h"
+//#endif
+#include "SOIL.h"
 
 void setAutopilotMode(bool newAPM);
 void SetupWorld(void);
@@ -90,6 +91,7 @@ bool	showHelp = true;		// show help text
 bool    drawOutline = true;
 bool    celebrating = false;      // showing solved-maze effect?
 bool    highSpeed = false;      // high-speed mode
+bool    flipTextures = false;   // exchange sky and maze textures
 
 // these should probably move to glCamera or a subclass thereof.
 float	keyTurnRate = 2.0f; // how fast to turn in response to keys
@@ -113,12 +115,11 @@ GLfloat xheading = 0.0f, yheading = 0.0f;
 GLfloat xpos = 0.5f, ypos = 0.5f, zpos = 10.0f;
 GLUquadricObj *quadric;	
 
-const int numFilters = 3;		// How many filters for each texture
-GLuint filter = 2;				// Which filter to use
-const int numTextures = (roof - ground + 1);		// Max # textures (not counting filtering)
-GLuint textures[numFilters * numTextures];		// Storage for texture indexes, with 3 filters each.
-GLuint skyTextures[14];   // room for up, down, and up to 12 sideways directions
-GLuint effectTexture;
+const int numMazeTextures = (roof - ground + 1);		// Max # maze textures (not counting sky, effects, etc.)
+GLuint mazeTextures[numMazeTextures];	// Storage for texture indices
+const int numSkyTextures = 14;		// Max # sky textures (not all used)
+GLuint skyTextures[numSkyTextures];   // room for up, down, and up to 12 sideways directions
+GLuint effectTexture, splashTexture;
 
 //TODO: read this from a text file at runtime?
 static char helpText[] = "Find your way through the maze from the entrance (green ring) to the exit (red).\n\
@@ -504,103 +505,107 @@ void SetupWorld()
    return;
 }
 
-AUX_RGBImageRec *LoadBMP(char *Filename)                // Loads A Bitmap Image
-{
-        FILE *File=NULL;                                // File Handle
+//AUX_RGBImageRec *LoadBMP(char *Filename)                // Loads A Bitmap Image
+//{
+//        FILE *File=NULL;                                // File Handle
+//
+//        if (!Filename)                                  // Make Sure A Filename Was Given
+//        {
+//                return NULL;                            // If Not Return NULL
+//        }
+//
+//        File=fopen(Filename,"r");                       // Check To See If The File Exists
+//
+//        if (File)                                       // Does The File Exist?
+//        {
+//                fclose(File);                           // Close The Handle
+//                return auxDIBImageLoad(Filename);       // Load The Bitmap And Return A Pointer
+//        }
+//        return NULL;                                    // If Load Failed Return NULL
+//}
 
-        if (!Filename)                                  // Make Sure A Filename Was Given
-        {
-                return NULL;                            // If Not Return NULL
-        }
-
-        File=fopen(Filename,"r");                       // Check To See If The File Exists
-
-        if (File)                                       // Does The File Exist?
-        {
-                fclose(File);                           // Close The Handle
-                return auxDIBImageLoad(Filename);       // Load The Bitmap And Return A Pointer
-        }
-        return NULL;                                    // If Load Failed Return NULL
-}
-
-// Load an image from a file, and create textures from it using multiple filters.
+// Load an image from a file, and create texture from it.
 // Return True if load succeeded.
-bool loadTexture(int i, char *filepath) {
-   bool status = TRUE;
+bool loadMazeTexture(int i, char *filepath) {
    if(!filepath) return FALSE;
 
-#ifdef USE_JPG
-   tImageJPG *pBitMap = Load_JPEG(filepath);
-#   define bitmap pBitMap
-#else
-   AUX_RGBImageRec *TextureImage[1];               // Create Storage Space For The Texture
-   TextureImage[0] = LoadBMP(filepath);
-#   define bitmap (TextureImage[0])
-#endif
+//#ifdef USE_JPG
+//   tImageJPG *pBitMap = Load_JPEG(filepath);
+//#   define bitmap pBitMap
+//#else
+//   AUX_RGBImageRec *TextureImage[1];               // Create Storage Space For The Texture
+//   TextureImage[0] = LoadBMP(filepath);
+//#   define bitmap (TextureImage[0])
+//#endif
+//
+//   if(!bitmap || !bitmap->data) return FALSE;
+//
+//   glGenTextures(1, &mazeTextures[i]);          // Create texture
+//
+//   // Create MipMapped Texture
+//   glBindTexture(GL_TEXTURE_2D, mazeTextures[i]);
+//   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+//   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST);
+//   gluBuild2DMipmaps(GL_TEXTURE_2D, 3, bitmap->sizeX, bitmap->sizeY, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
+//
+//   free(bitmap->data);			
+//   free(bitmap);
 
-   if(!bitmap || !bitmap->data) return FALSE;
-
-   glGenTextures(numFilters, &textures[numFilters*i]);          // Create 3 filtered textures
-
-   // Create Nearest Filtered Texture
-   //debugMsg("Binding texture %s at %d\n", filepath, numFilters*i + 0);
-   glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 0]);
-   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-   glTexImage2D(GL_TEXTURE_2D, 0, 3, bitmap->sizeX, bitmap->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
-
-   // Create Linear Filtered Texture
-   //debugMsg("Binding texture %s at %d\n", filepath, numFilters*i + 1);
-   glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 1]);
-   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-   glTexImage2D(GL_TEXTURE_2D, 0, 3, bitmap->sizeX, bitmap->sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
-
-   // Create MipMapped Texture
-   //debugMsg("Binding texture %s at %d\n", filepath, numFilters*i + 2);
-   glBindTexture(GL_TEXTURE_2D, textures[numFilters*i + 2]);
-   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST);
-   gluBuild2DMipmaps(GL_TEXTURE_2D, 3, bitmap->sizeX, bitmap->sizeY, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
-
-   free(bitmap->data);			
-   free(bitmap);
-   return status;
+   mazeTextures[i] = SOIL_load_OGL_texture(filepath, SOIL_LOAD_AUTO,
+		mazeTextures[i],
+                SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS);
+   if (mazeTextures[i])
+      return true;
+   else {
+      debugMsg("Error loading image file %s: %s\n", filepath, SOIL_last_result());
+      return false;
+   }
 }
 
 bool loadSkyTexture(int i, char *filepath) {
-   bool status = TRUE;
    if(!filepath) return FALSE;
 
-#ifdef USE_JPG
-   tImageJPG *pBitMap = Load_JPEG(filepath);
-#   define bitmap pBitMap
-#else
-   AUX_RGBImageRec *TextureImage[1];               // Create Storage Space For The Texture
-   TextureImage[0] = LoadBMP(filepath);
-#   define bitmap (TextureImage[0])
-#endif
-
-   if(!bitmap || !bitmap->data) {
-      debugMsg("Failed to load sky texture %s\n", filepath);
-      return FALSE;
+//#ifdef USE_JPG
+//   tImageJPG *pBitMap = Load_JPEG(filepath);
+//#   define bitmap pBitMap
+//#else
+//   AUX_RGBImageRec *TextureImage[1];               // Create Storage Space For The Texture
+//   TextureImage[0] = LoadBMP(filepath);
+//#   define bitmap (TextureImage[0])
+//#endif
+//
+//   if(!bitmap || !bitmap->data) {
+//      debugMsg("Failed to load sky texture %s\n", filepath);
+//      return FALSE;
+//   }
+//
+//   glGenTextures(1, &skyTextures[i]);          // Create texture
+//
+//   // Create MipMapped Texture
+//   // debugMsg("Binding texture %s at %d\n", filepath, skyTextures[i]);
+//   glBindTexture(GL_TEXTURE_2D, skyTextures[i]);
+//   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+//   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+//   // Interpolations make seams in the skybox.
+//   //glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+//   //glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST);
+//   gluBuild2DMipmaps(GL_TEXTURE_2D, 3, bitmap->sizeX, bitmap->sizeY, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
+//
+//   free(bitmap->data);			
+//   free(bitmap);
+//   return status;
+   skyTextures[i] = SOIL_load_OGL_texture(filepath, SOIL_LOAD_AUTO,
+      skyTextures[i],
+      // The textures seem to come out upside-down, so invert them.
+      SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS
+      // I had been building mipmaps, but it doesn't seem necessary for the skybox.
+      );
+   if (skyTextures[i])
+      return true;
+   else {
+      debugMsg("Error loading image file %s: %s\n", filepath, SOIL_last_result());
+      return false;
    }
-
-   glGenTextures(1, &skyTextures[i]);          // Create texture
-
-   // Create MipMapped Texture
-   // debugMsg("Binding texture %s at %d\n", filepath, skyTextures[i]);
-   glBindTexture(GL_TEXTURE_2D, skyTextures[i]);
-   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-   // Interpolations make seams in the skybox.
-   //glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-   //glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST);
-   gluBuild2DMipmaps(GL_TEXTURE_2D, 3, bitmap->sizeX, bitmap->sizeY, GL_RGB, GL_UNSIGNED_BYTE, bitmap->data);
-
-   free(bitmap->data);			
-   free(bitmap);
-   return status;
 }
 
 bool loadSkyTextures() {
@@ -625,22 +630,60 @@ bool loadSkyTextures() {
 #endif // USE_JPG
 }
 
+// Allocate texture IDs for the textures we'll load later.
+// This is because we'll need some IDs before we need the textures themselves.
+void genGLTextures()
+{
+   glGenTextures(numMazeTextures, mazeTextures); // allocate textures for maze walls/floor/ceiling
+   glGenTextures(numSkyTextures, skyTextures); // allocate textures for sky
+
+   glGenTextures(1, &effectTexture);          // allocate texture for screen effects
+   glGenTextures(1, &splashTexture);          // allocate texture for splash image
+}
+
 bool LoadGLTextures()                                    // Load images and convert to textures
 {
    bool status=FALSE;                               // status Indicator
    // load the image, check for errors; if it's not found, quit.
 
-#ifdef USE_JPG
-   status = loadTexture(wall1, "Data/brickWall_tileable.jpg") && loadTexture(ground, "Data/carpet-6716-2x2mir.jpg")
-      && loadTexture(wall2, "Data/rocky.jpg") && loadTexture(roof, "Data/roof1.jpg") && loadTexture(portal, "Data/wood-planks-4227.jpg");
-#else
-   status = loadTexture(wall1, "Data/brickWall_tileable.bmp") && loadTexture(ground, "Data/carpet-6716-2x2mir.bmp")
-      && loadTexture(wall2, "Data/rocky.bmp") && loadTexture(roof, "Data/roof1.bmp") && loadTexture(portal, "Data/wood-planks-4227.bmp");
+#ifdef PROFILING
+   // tried QueryPerformanceCounter... what a type mess! clock() is plenty of resolution for what I need.
+   clock_t perfBefore = clock(), perfAfter;
+   //__int64 perfBefore = 0, perfAfter = 0, perfFreq = 0;
+   //if (!QueryPerformanceFrequency((LARGE_INTEGER *)(&perfFreq)))
+   //   debugMsg("Error in QueryPerformanceFrequency(): %d\n", GetLastError());
+   //else if (!QueryPerformanceCounter((LARGE_INTEGER *)(&perfBefore)))
+   //   debugMsg("Error in QueryPerformanceCounter(&before): %d\n", GetLastError());
 #endif
-   loadSkyTextures(); // don't complain if this fails; sky textures are a big download.
-   // debugMsg("Texture load status: %d\n", status);
 
-   glGenTextures(1, &effectTexture);          // allocate texture for screen effects but don't load anything yet.
+#ifdef USE_JPG
+   status = loadMazeTexture(wall1, "Data/brickWall_tileable.jpg") && loadMazeTexture(ground, "Data/carpet-6716-2x2mir.jpg")
+      && loadMazeTexture(wall2, "Data/rocky.jpg") && loadMazeTexture(roof, "Data/roof1.jpg") && loadMazeTexture(portal, "Data/wood-planks-4227.jpg");
+#else
+   status = loadMazeTexture(wall1, "Data/brickWall_tileable.bmp") && loadMazeTexture(ground, "Data/carpet-6716-2x2mir.bmp")
+      && loadMazeTexture(wall2, "Data/rocky.bmp") && loadMazeTexture(roof, "Data/roof1.bmp") && loadMazeTexture(portal, "Data/wood-planks-4227.bmp");
+#endif
+   debugMsg("Texture load status: %d\n", status);
+
+#ifdef PROFILING
+   perfAfter = clock();
+   debugMsg("Loading maze textures took %ld clock ticks (%0.2f sec)\n", perfAfter - perfBefore,
+         (perfAfter - perfBefore + 0.0) / CLOCKS_PER_SEC);
+   perfBefore = perfAfter;
+#endif
+
+   loadSkyTextures(); // don't complain if this fails; sky textures are a big download.
+
+#ifdef PROFILING
+   //if (!QueryPerformanceCounter((LARGE_INTEGER *)&perfAfter))
+   //   debugMsg("Error in QueryPerformanceCounter(&after): %d\n", GetLastError());
+   //else
+   //   debugMsg("Loading textures took %s counts (%s sec)\n", (perfAfter - perfBefore).ToString(),
+   //      perfFreq == 0 ? (0.0).ToString() : ((perfAfter - perfBefore + 0.0) / perfFreq).ToString());
+   perfAfter = clock();
+   debugMsg("Loading sky textures took %ld clock ticks (%0.2f sec)\n", perfAfter - perfBefore,
+         (perfAfter - perfBefore + 0.0) / CLOCKS_PER_SEC);   
+#endif
 
    return status;                                  // Return The Status
 }
@@ -776,7 +819,7 @@ GLvoid createFacadeDL(GLuint facadeDL)
    glNewList(facadeDL, GL_COMPILE);
 
    // use portal texture
-   glBindTexture(GL_TEXTURE_2D, textures[portal * numFilters + filter]);
+   glBindTexture(GL_TEXTURE_2D, mazeTextures[portal]);
 
    glBegin(GL_QUADS);
 
@@ -1040,45 +1083,49 @@ GLvoid ReSizeGLScene(GLsizei width, GLsizei height)		// Resize And Initialize Th
 
 int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
 {
-	if (!LoadGLTextures())								// Jump To Texture Loading Routine
-	{
-		return FALSE;									// If Texture Didn't Load Return FALSE
-	}
+   //if (!LoadGLTextures())								// Jump To Texture Loading Routine
+   //{
+   //	return FALSE;									// If Texture Didn't Load Return FALSE
+   //}
+   // moved this into the draw loop to make startup seem faster.
+   genGLTextures();
 
-	glEnable(GL_TEXTURE_2D);							// Enable Texture Mapping
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);					// Set The Blending Function For Translucency
-	glClearColor(0.85f, 0.9f, 1.0f, 0.0f);				// Set the background color (sky blue)
-	glClearDepth(1.0);									// Enables Clearing Of The Depth Buffer
-	glDepthFunc(GL_LESS);								// The Type Of Depth Test To Do
-	glEnable(GL_DEPTH_TEST);							// Enables Depth Testing
-	glShadeModel(GL_SMOOTH);							// Enables Smooth Color Shading
-        glEnable(GL_LINE_SMOOTH); // enable line antialiasing - for outline
-        glLineWidth(1.0); // for outline. 1 is default anyway.
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
+   glEnable(GL_TEXTURE_2D);							// Enable Texture Mapping
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE);					// Set The Blending Function For Translucency
+   glClearColor(0.85f, 0.9f, 1.0f, 0.0f);				// Set the background color (sky blue)
+   glClearDepth(1.0);									// Enables Clearing Of The Depth Buffer
+   glDepthFunc(GL_LESS);								// The Type Of Depth Test To Do
+   glEnable(GL_DEPTH_TEST);							// Enables Depth Testing
+   glShadeModel(GL_SMOOTH);							// Enables Smooth Color Shading
+   glEnable(GL_LINE_SMOOTH); // enable line antialiasing - for outline
+   glLineWidth(1.0); // for outline. 1 is default anyway.
+   glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
 
-	quadric = gluNewQuadric();			// create a quadric object for cylinders, discs, etc.
-	gluQuadricNormals(quadric, GLU_SMOOTH);	// Create Smooth Normals ( NEW )
-	// gluQuadricTexture(quadric, GL_TRUE);		// Create Texture Coords ( NEW )
+   quadric = gluNewQuadric();			// create a quadric object for cylinders, discs, etc.
+   gluQuadricNormals(quadric, GLU_SMOOTH);	// Create Smooth Normals ( NEW )
+   // gluQuadricTexture(quadric, GL_TRUE);		// Create Texture Coords ( NEW )
 
-	SetupWorld();
+   SetupWorld();
 
-	// Create display lists for help and fps
-	helpDL = glGenLists(5);
-	fpsDL = helpDL + 1;
-        timeDL = fpsDL + 1;
-        statusDL = timeDL + 1;
-        scoreListDL = statusDL + 1;
+   // Create display lists for help and fps
+   helpDL = glGenLists(5);
+   fpsDL = helpDL + 1;
+   timeDL = fpsDL + 1;
+   statusDL = timeDL + 1;
+   scoreListDL = statusDL + 1;
 
-	// Initialize the help display list. The FPS DL is recreated every time FPS is calculated.
-	createTextDLs(helpDL, true, helpText);
-	createTextDLs(fpsDL, true, "FPS: unknown");
-        createTextDLs(timeDL, true, "");
+   // Initialize the help display list. The FPS DL is recreated every time FPS is calculated.
+   createTextDLs(helpDL, true, helpText);
+   createTextDLs(fpsDL, true, "FPS: unknown");
+   createTextDLs(timeDL, true, "");
 
-        facadeDL = scoreListDL + 1;
-        createFacadeDL(facadeDL);
+   facadeDL = scoreListDL + 1;
+   createFacadeDL(facadeDL);
 
-	return TRUE;										// Initialization Went OK
+   return TRUE;										// Initialization Went OK
 }
+
+#define skyTex(i) (flipTextures ? mazeTextures[i] : skyTextures[i])
 
 // draw the sky box. Thanks to:
 //  http://sidvind.com/wiki/Skybox_tutorial, http://gpwiki.org/index.php/Sky_Box
@@ -1104,7 +1151,7 @@ void drawSkyBox(void) {
     glColor4f(1,1,1,1);
 
     // Render the front quad
-    glBindTexture(GL_TEXTURE_2D, skyTextures[2]);
+    glBindTexture(GL_TEXTURE_2D, skyTex(2));
     glBegin(GL_QUADS);
         glTexCoord2f(0, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
         glTexCoord2f(1, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
@@ -1114,7 +1161,7 @@ void drawSkyBox(void) {
 
     // Render the left quad
     //TODO: use different textures
-    glBindTexture(GL_TEXTURE_2D, skyTextures[5]);
+    glBindTexture(GL_TEXTURE_2D, skyTex(5));
     glBegin(GL_QUADS);
         glTexCoord2f(0, 0); glVertex3f(  0.5f, -0.5f,  0.5f );
         glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
@@ -1123,7 +1170,7 @@ void drawSkyBox(void) {
     glEnd();
 
     // Render the back quad
-    glBindTexture(GL_TEXTURE_2D, skyTextures[4]);
+    glBindTexture(GL_TEXTURE_2D, skyTex(4));
     glBegin(GL_QUADS);
         glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f,  0.5f );
         glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f,  0.5f );
@@ -1132,7 +1179,7 @@ void drawSkyBox(void) {
     glEnd();
 
     // Render the right quad
-    glBindTexture(GL_TEXTURE_2D, skyTextures[3]);
+    glBindTexture(GL_TEXTURE_2D, skyTex(3));
     glBegin(GL_QUADS);
         glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
         glTexCoord2f(1, 0); glVertex3f( -0.5f, -0.5f,  0.5f );
@@ -1141,7 +1188,7 @@ void drawSkyBox(void) {
     glEnd();
 
     // Render the top quad
-    glBindTexture(GL_TEXTURE_2D, skyTextures[1]);
+    glBindTexture(GL_TEXTURE_2D, skyTex(1));
     glBegin(GL_QUADS);
         glTexCoord2f(0, 1); glVertex3f( -0.5f,  0.5f, -0.5f );
         glTexCoord2f(0, 0); glVertex3f( -0.5f,  0.5f,  0.5f );
@@ -1150,7 +1197,7 @@ void drawSkyBox(void) {
     glEnd();
 
     // Render the bottom quad
-    glBindTexture(GL_TEXTURE_2D, skyTextures[0]);
+    glBindTexture(GL_TEXTURE_2D, skyTex(0));
     glBegin(GL_QUADS);
         glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
         glTexCoord2f(0, 1); glVertex3f( -0.5f, -0.5f,  0.5f );
@@ -1163,6 +1210,28 @@ void drawSkyBox(void) {
     glPopMatrix();
 }
 
+// draw a quad that covers whole window, with given brightness and opacity
+void drawWindowQuad(float brightness, float alpha) {
+
+   glPushMatrix();
+   glLoadIdentity();
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   glEnable(GL_BLEND);
+   glDisable(GL_DEPTH_TEST);
+   glBindTexture(GL_TEXTURE_2D, GL_NONE);    // no texture
+
+   glBegin(GL_QUADS);
+      //glColor4f(0.8f, 0.8f, 1.0f, alpha);
+      glColor4f(brightness, brightness, brightness, alpha); 
+      glVertex3f(1.15f, 1.15f, -2.0f);
+      glVertex3f(-1.15f, 1.15f, -2.0f);
+      glVertex3f(-1.15f, -1.15f, -2.0f);
+      glVertex3f(1.15f, -1.15f, -2.0f);
+   glEnd();
+
+   glEnable(GL_DEPTH_TEST);
+   glPopMatrix();
+}
 void celebrationEffect() {
    clock_t time_now = clock();
    const int scaleFactor = 10;
@@ -1175,144 +1244,181 @@ void celebrationEffect() {
 
    // Thanks to http://steinsoft.net/index.php?site=Programming/Code%20Snippets/OpenGL/no1 for this idea:
    // Draw a quad in front of the camera and modulate its transparency.
+   float brightness = alpha + 1 - maxAlpha; // fade quad from white to almost-black
+   drawWindowQuad(brightness, alpha);
+}
+
+// draw a quad that is centered in the window, with given texture
+void drawCenterQuad(GLuint texture = GL_NONE) {
+
+   glPushMatrix();
    glLoadIdentity();
-   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-   glEnable(GL_BLEND);
    glDisable(GL_DEPTH_TEST);
-   glBindTexture(GL_TEXTURE_2D, GL_NONE);    // no texture
+   glBindTexture(GL_TEXTURE_2D, texture);
 
    glBegin(GL_QUADS);
-      //glColor4f(0.8f, 0.8f, 1.0f, alpha);
-      float brightness = alpha + 1 - maxAlpha; // fade quad from white to almost-black
-      glColor4f(brightness, brightness, brightness, alpha); 
-      glVertex3f(1.15f, 1.15f, -2.0f);
-      glVertex3f(-1.15f, 1.15f, -2.0f);
-      glVertex3f(-1.15f, -1.15f, -2.0f);
-      glVertex3f(1.15f, -1.15f, -2.0f);
+      glColor3f(1.0, 1.0, 1.0);
+      glTexCoord2f(1.0, 1.0); glVertex3f( 0.75,  0.6, -2.0);
+      glTexCoord2f(0.0, 1.0); glVertex3f(-0.75,  0.6, -2.0);
+      glTexCoord2f(0.0, 0.0); glVertex3f(-0.75, -0.6, -2.0);
+      glTexCoord2f(1.0, 0.0); glVertex3f( 0.75, -0.6, -2.0);
    glEnd();
 
    glEnable(GL_DEPTH_TEST);
+   glPopMatrix();
+}
 
+void drawSplash(void) {
+   static bool loadedSplash = false;
+
+   drawWindowQuad(0.3, 1.0);
+
+   if (!loadedSplash) {
+      loadedSplash = (SOIL_load_OGL_texture("Data/maze3dflyer-splash.png",
+         SOIL_LOAD_AUTO, splashTexture,
+         // The textures seem to come out upside-down, so invert them.
+         SOIL_FLAG_INVERT_Y) == splashTexture);
+      if (!loadedSplash) return;
+   }
+
+   drawCenterQuad(splashTexture);
 }
 
 int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 {
-	if (blend) {			// ? do polygon anti-aliasing, a la http://glprogramming.com/red/chapter06.html#name2
-		glClear (GL_COLOR_BUFFER_BIT);
-	} else {
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear The Screen And The Depth Buffer
-	}
+   if (firstTime) {
+      // First time through, show splash screen
+      // while we do the slow texture-loading.
+      // This will let user "see something" sooner, so startup seems faster.
 
-        glLoadIdentity(); // Reset The View matrix
+      drawSplash();
+      // drawText();
+      // show the splash screen immediately.
+      glFlush();
+      SwapBuffers(hDC); // for double buffering
 
-	Cam.SetPerspective(); // actually applies camera movement, acceleration, collision, etc. and sets matrix
-	// reset white color (default)
-	glColor3f(1.0f, 1.0f, 1.0f);
+      // The slow stuff:
+      if (!LoadGLTextures()) return false;
 
-        drawSkyBox();
+      // continue now with your regularly scheduled rendering.
+   }
 
-	//if (firstTime) debugMsg("beginning walls loop\n");
+   if (blend) {			// ? do polygon anti-aliasing, a la http://glprogramming.com/red/chapter06.html#name2
+	    glClear (GL_COLOR_BUFFER_BIT);
+   } else {
+	    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear The Screen And The Depth Buffer
+   }
 
-	// debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
+   glLoadIdentity(); // Reset The View matrix
 
-	// wall1 texture: xWalls
-	glBindTexture(GL_TEXTURE_2D, textures[wall1 * numFilters + filter]);
+   Cam.SetPerspective(); // actually applies camera movement, acceleration, collision, etc. and sets matrix
+   // reset white color (default)
+   glColor3f(1.0f, 1.0f, 1.0f);
+
+   drawSkyBox();
+
+   //if (firstTime) debugMsg("beginning walls loop\n");
+
+   // debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
+
+   // wall1 texture: xWalls
+   glBindTexture(GL_TEXTURE_2D, mazeTextures[wall1]);
 
 #ifdef DEBUGGING
-	//// cylinders for z-axis identification
-	//gluCylinder(quadric, 0.2f, 0.2f, 5.0f, 10, 10);
+   //// cylinders for z-axis identification
+   //gluCylinder(quadric, 0.2f, 0.2f, 5.0f, 10, 10);
 #endif
 
-	// Process quads
-	glBegin(GL_QUADS);
+   // Process quads
+   glBegin(GL_QUADS);
 
-	for (int i=0; i <= maze.w; i++)
-		for (int j=0; j < maze.h; j++)
-			for (int k=0; k < maze.d; k++) {
-				if (maze.xWalls[i][j][k].state == Wall::CLOSED) {
-					//if (firstTime) {
-					//	debugMsg("drawing x wall %d,%d,%d: ", i, j, k); 
-					//}
-					maze.xWalls[i][j][k].draw('x');	// draw xWall
-				}
-			}
-	glEnd(); // GL_QUADS
+   for (int i=0; i <= maze.w; i++)
+	    for (int j=0; j < maze.h; j++)
+	          for (int k=0; k < maze.d; k++) {
+			   if (maze.xWalls[i][j][k].state == Wall::CLOSED) {
+				    //if (firstTime) {
+				    //	debugMsg("drawing x wall %d,%d,%d: ", i, j, k); 
+				    //}
+				    maze.xWalls[i][j][k].draw('x');	// draw xWall
+			   }
+	          }
+   glEnd(); // GL_QUADS
 
-	// wall2 panel texture: zWalls
-	glBindTexture(GL_TEXTURE_2D, textures[wall2 * numFilters+filter]);
+   // wall2 panel texture: zWalls
+   glBindTexture(GL_TEXTURE_2D, mazeTextures[wall2]);
 
-	// Process quads
-	glBegin(GL_QUADS);
+   // Process quads
+   glBegin(GL_QUADS);
 
-	for (int i=0; i < maze.w; i++)
-		for (int j=0; j < maze.h; j++)
-			for (int k=0; k <= maze.d; k++) {
+   for (int i=0; i < maze.w; i++)
+	    for (int j=0; j < maze.h; j++)
+	          for (int k=0; k <= maze.d; k++) {
 
-				if (maze.zWalls[i][j][k].state == Wall::CLOSED) {
-					//if (firstTime) {
-					//	debugMsg("drawing z wall %d,%d,%d: ", i, j, k); 
-					//}
-					maze.zWalls[i][j][k].draw('z'); // draw zWall
-				}
-			}
-	glEnd();
+			   if (maze.zWalls[i][j][k].state == Wall::CLOSED) {
+				    //if (firstTime) {
+				    //	debugMsg("drawing z wall %d,%d,%d: ", i, j, k); 
+				    //}
+				    maze.zWalls[i][j][k].draw('z'); // draw zWall
+			   }
+	          }
+   glEnd();
 
-	// ground texture
-	glBindTexture(GL_TEXTURE_2D, textures[ground * numFilters + filter]);
-	// Process quads
-	glBegin(GL_QUADS);
+   // ground texture
+   glBindTexture(GL_TEXTURE_2D, mazeTextures[ground]);
+   // Process quads
+   glBegin(GL_QUADS);
 
-	for (int i=0; i < maze.w; i++)
-		for (int j=0; j <= maze.h; j++)
-			for (int k=0; k < maze.d; k++) {
-				if (maze.yWalls[i][j][k].state == Wall::CLOSED
-					&& !maze.yWalls[i][j][k].outsidePositive) {
-					//if (firstTime) {
-					//	debugMsg("drawing y wall %d,%d,%d\n", i, j, k);
-					//}
-					maze.yWalls[i][j][k].draw('y'); // draw yWall
-				}
-			}
+   for (int i=0; i < maze.w; i++)
+	    for (int j=0; j <= maze.h; j++)
+	          for (int k=0; k < maze.d; k++) {
+			   if (maze.yWalls[i][j][k].state == Wall::CLOSED
+				    && !maze.yWalls[i][j][k].outsidePositive) {
+				    //if (firstTime) {
+				    //	debugMsg("drawing y wall %d,%d,%d\n", i, j, k);
+				    //}
+				    maze.yWalls[i][j][k].draw('y'); // draw yWall
+			   }
+	          }
 
-	glEnd();
+   glEnd();
 
-	// roof/ceiling texture
-	glBindTexture(GL_TEXTURE_2D, textures[roof * numFilters+filter]);
-	// glColor3f(1.0f, 0.5f, 0.5f); // temp for debugging
-	//if (firstTime) {
-	//	debugMsg("Binding roof texture at %d\n", roof*numFilters+filter);
-	//}
+   // roof/ceiling texture
+   glBindTexture(GL_TEXTURE_2D, mazeTextures[roof]);
+   // glColor3f(1.0f, 0.5f, 0.5f); // temp for debugging
+   //if (firstTime) {
+   //	debugMsg("Binding roof texture at %d\n", roof);
+   //}
 
-	// Process quads
-	glBegin(GL_QUADS);
+   // Process quads
+   glBegin(GL_QUADS);
 
-	for (int i=0; i < maze.w; i++)
-		for (int j=0; j <= maze.h; j++)
-			for (int k=0; k < maze.d; k++) {
-				if (maze.yWalls[i][j][k].state == Wall::CLOSED
-					&& maze.yWalls[i][j][k].outsidePositive) {
-					//if (firstTime) {
-					//	debugMsg("drawing y wall roof %d,%d,%d\n", i, j, k);
-					//}
-					maze.yWalls[i][j][k].draw('y'); // draw yWall
-				}
-			}
+   for (int i=0; i < maze.w; i++)
+	    for (int j=0; j <= maze.h; j++)
+	          for (int k=0; k < maze.d; k++) {
+			   if (maze.yWalls[i][j][k].state == Wall::CLOSED
+				    && maze.yWalls[i][j][k].outsidePositive) {
+				    //if (firstTime) {
+				    //	debugMsg("drawing y wall roof %d,%d,%d\n", i, j, k);
+				    //}
+				    maze.yWalls[i][j][k].draw('y'); // draw yWall
+			   }
+	          }
 
-	glEnd();
+   glEnd();
 
-        if (drawOutline) maze.drawOutline();
+   if (drawOutline) maze.drawOutline();
 
-	// display entrance/exit (may mess up rot/transf matrix)
-	maze.ccEntrance.drawExit(maze.entranceWall, true);
-	maze.ccExit.drawExit(maze.exitWall, false);
+   // display entrance/exit (may mess up rot/transf matrix)
+   maze.ccEntrance.drawExit(maze.entranceWall, true);
+   maze.ccExit.drawExit(maze.exitWall, false);
 
-        // if just solved the maze, flash the screen
-        if (celebrating) celebrationEffect();
+   // if just solved the maze, flash the screen
+   if (celebrating) celebrationEffect();
 
-	drawText(); // draw any needed screen text, such as FPS
+   drawText(); // draw any needed screen text, such as FPS
 
-	firstTime = false; // debugging
-	return TRUE;										// Everything Went OK
+   firstTime = false; // debugging
+   return TRUE;										// Everything Went OK
 }
 
 GLvoid KillGLWindow(GLvoid)								// Properly Kill The Window
@@ -1845,16 +1951,6 @@ bool CheckKeys(void) {
 	else if (!keysDown[VK_SHIFT])
 	{
 		keysStillDown[VK_SHIFT]=FALSE;
-	}
-
-	if (keysDown['F'] && !keysStillDown['F'])
-	{
-		keysStillDown['F']=TRUE;
-		filter = (filter + 1) % numFilters;
-	}
-	else if (!keysDown['F'])
-	{
-		keysStillDown['F']=FALSE;
 	}
 
 	// '/?' key: toggle help display
