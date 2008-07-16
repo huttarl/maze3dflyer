@@ -325,4 +325,5 @@ void glCamera::StandBack(float w, float h, float d, float cellSize) {
    // GoTo(x, y, -z, 45.0 - m, 135.0 + (d - w) * 3.0);
    debugMsg("dx: %2.2f, d2: %2.2f\n", dx, d2);
    debugMsg("pitch: %2.2f, heading: %2.2f\n", m_PitchDegrees, m_HeadingDegrees);
+   AccelForward(-keyAccelRate*2);
 }
