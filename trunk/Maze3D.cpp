@@ -50,6 +50,27 @@ void Maze3D::randomizeDims(void) {
       maze.w, maze.h, maze.d, maze.sparsity);
 }
 
+// slightly increase the dimensions of the maze, to correspond to
+// given difficulty level.
+void Maze3D::incrementDims(int level) {
+   // int v = volume();
+   // Randomly pick an axis to increase, with the smallest axis being most likely.
+   int whichAxis = rand() % (w*2 + h*2 + d*2);
+   if (whichAxis < w + h) d++;
+   else if (whichAxis < w + h + w + d) h++;
+   else w++;
+
+   int minDim = min(w, min(h, d));
+   if (minDim < 3) sparsity = 2;
+   else {
+      // This is my pseudoscientific, lazy attempt at approximating a normal distribution.
+      // r is a number in [0,1]
+      float r = ((rand() % 98) + (rand() % 99) + 0.0) / 195.0;
+      // bias against the highest number (minDim) by subtracting an extra 0.2.
+      // round the result by adding 0.5 and casting to int.
+      sparsity = int(2.0 + (minDim - 2.2) * r + 0.5);
+   }
+}
 
 bool Maze3D::IsInside(glPoint p) {
    CellCoord cc; //TODO: use a static one

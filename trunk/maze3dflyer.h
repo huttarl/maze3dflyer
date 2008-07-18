@@ -19,6 +19,8 @@ extern GLuint facadeDL; // needed by Wall.cpp
 
 typedef enum { ground, wall1, wall2, portal, roof } Material;
 
+typedef enum { fadingIn, playing, autopilot, celebrating, fadingOut } GameState;
+
 extern GLUquadricObj *quadric;	
 
 #endif                  /* __maze3dflyer_h__ */

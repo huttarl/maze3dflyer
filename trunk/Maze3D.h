@@ -49,6 +49,7 @@ public:
    Maze3D(int _w = 8, int _h = 8, int _d = 8, int _s = 3, int _b = 2);
    void setDims(int _w = 8, int _h = 8, int _d = 8, int _s = 3, int _b = 2);
    void randomizeDims(void);
+   void incrementDims(int level);
 
    bool IsInside(glPoint position);
    // Return true if this wall is CLOSED or is entrance or exit.

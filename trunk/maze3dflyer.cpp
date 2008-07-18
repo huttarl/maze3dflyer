@@ -13,13 +13,6 @@
  *		display/navigation program (this one is not related to it).
  */
 
-/*
- * Terminology note:
- * I have sometimes used the following terms interchangeably: visited (of a cell), passage, open, occupied, carved
- * But after algorithm changes, a cell having been "visited" (by the algorithm) no longer implies that it is "passage",
- * as cells that are not part of the navigable maze can now exist.
- */
-
 #include <stdlib.h> // In Windows, stdlib.h must come before glut.h
 #include <windows.h>
 #include <math.h>
@@ -60,11 +53,12 @@ bool collide(glPoint &p, glVector &v);
 
 void CheckMouse(void);
 bool CheckKeys(void);
-
+void sequence(void);
 
 glCamera Cam;				// Our Camera for moving around and setting prespective
 							// on things.
 Autopilot *ap;				// autopilot instance
+GameState gameState = fadingIn;
 
 HDC			hDC=NULL;		// Private GDI Device Context
 HGLRC		hRC=NULL;		// Permanent Rendering Context
@@ -89,7 +83,6 @@ bool	mouseGrab = true;		// mouse centering is on?
 bool	showFPS = false, showScores = false, showStatus = true; // whether to display framerate or score list
 bool	showHelp = true;		// show help text
 bool    drawOutline = true;
-bool    celebrating = false;      // showing solved-maze effect?
 bool    highSpeed = false;      // high-speed mode
 bool    flipTextures = false;   // exchange sky and maze textures
 
@@ -121,6 +114,10 @@ const int numSkyTextures = 14;		// Max # sky textures (not all used)
 GLuint skyTextures[numSkyTextures];   // room for up, down, and up to 12 sideways directions
 GLuint effectTexture, splashTexture;
 
+const int howLongShowSolved = 5; // for how many seconds do we display "SOLVED"?
+const int durFade = 1 * CLOCKS_PER_SEC; // how many ticks to fade out / fade in for new level?
+clock_t fadeTill = 0; // when to end each fade
+int level = 1;    // current difficulty level
 //TODO: read this from a text file at runtime?
 static char helpText[] = "Find your way through the maze from the entrance (green ring) to the exit (red).\n\
 \n\
@@ -142,7 +139,6 @@ U: toggle status bar display\n\
 G: toggle maze outline\n\
 F1: toggle full-screen mode";
 
-const int howLongShowSolved = 5; // for how many do we display "SOLVED"?
 
 
 void debugMsg(const char *str, ...)
@@ -171,9 +167,9 @@ void errorMsg(const char *str, ...)
 
 
 // class instance counters
-static int nic=0; // CellCoord
-static int nc=0; // Cell
-static int nw=0; // Wall
+static int nic = 0; // CellCoord
+static int nc = 0; // Cell
+static int nw = 0; // Wall
 
 bool firstTime = true; // for debugging
 
@@ -185,12 +181,20 @@ LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);	// Declaration For WndProc
 // 
 // This has been modified to add sparsity: passage cells cannot be
 // within distance k of each other unless they are connected as directly as possible.
+
+/*
+ * Terminology note:
+ * I have sometimes used the following terms interchangeably: visited (of a cell), passage, open, occupied, carved
+ * But after algorithm changes, a cell having been "visited" (by the algorithm) no longer implies that it is "passage",
+ * as cells that are not part of the navigable maze can now exist.
+ */
+
 void generateMaze()
 {
 	CellCoord *queue = new CellCoord[maze.w * maze.h * maze.d], *currCell, temp, neighbors[6];
 	int queueSize = 0, addedNeighbors = 0, eemhdist = 0, ncmhdist = 0;
 
-	srand((int)time(0));
+	srand((int)(clock() % 3));
 	// pick a random starting cell and put it in the queue
 	queue[0].x = rand() % maze.w;
 	queue[0].y = rand() % maze.h;
@@ -445,7 +449,8 @@ void newMaze() {
 }
 
 void nextLevel() {
-   maze.randomizeDims();
+   level++;
+   maze.incrementDims(level);
    SetupWorld();
 }
 
@@ -594,7 +599,7 @@ bool loadSkyTexture(int i, char *filepath) {
 //   free(bitmap->data);			
 //   free(bitmap);
 //   return status;
-   skyTextures[i] = SOIL_load_OGL_texture(filepath, SOIL_LOAD_AUTO,
+   skyTextures[i] = SOIL_load_OGL_texture(filepath, SOIL_LOAD_AUTO, // SOIL_LOAD_L for grayscale
       skyTextures[i],
       // The textures seem to come out upside-down, so invert them.
       SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS
@@ -755,7 +760,7 @@ GLvoid createTextDLs(GLuint DL, bool variableSpaced, const char *fmt, ...)
       x = xRes - 100, y = yRes - lineHeight/2 + 2;
          //TODO ###: could count lines and columns in text and adjust y to yRes - lineHeight * lines and x to xRes - 10 * columns.
    else if (DL == timeDL) { // position of timer text
-      if (celebrating)
+      if (gameState == celebrating)
          x = xRes / 2 - 9*strlen(text)/2, y = yRes/2 - lineHeight*2;
       else
          x = 5, y = yRes - lineHeight/2 + 2;
@@ -968,7 +973,7 @@ void celebrateSolution() {
    }
    else maze.newBest = false;
 
-   celebrating = true;
+   gameState = celebrating;
 
    // Maybe someday use:
    //// Thanks to Jakub at http://www.allegro.cc/forums/thread/535015 for screen-copying code:
@@ -982,8 +987,8 @@ char *statusText(void) {
    char *dims = highScoreList.dims(maze);
    float scoreToBeat = highScoreList.getHighScore(dims);
 
-   sprintf(buf, "Maze size: %s.  Passages: %d.  Best time: %s.   %s %s %s %s %s", //  <%d %d %d>
-      dims, maze.numPassageCells,
+   sprintf(buf, "L%d: %s.  Passages: %d.  Best time: %s.   %s %s %s %s %s", //  <%d %d %d>
+      level, dims, maze.numPassageCells,
       HighScoreList::formatTime(scoreToBeat, false),
       mouseGrab ? "[M]" : "",
       maze.checkCollisions ? "" : "[C]", // hide from beginners
@@ -1001,65 +1006,64 @@ char *statusText(void) {
 // Does not preserve any previous projection.
 void drawText()
 {
-	// calculate framerate. Thanks to http://nehe.gamedev.net/data/articles/article.asp?article=17
-	static int frames = 0;
-	static clock_t last_time = 0;
-        static char solvingStatus[50];
-        int minutes = 0;
+   // calculate framerate. Thanks to http://nehe.gamedev.net/data/articles/article.asp?article=17
+   static int frames = 0;
+   static clock_t lastTime = 0;
+   static char solvingStatus[50];
+   int minutes = 0;
 
-	clock_t time_now = clock();
-        if (last_time == 0) last_time = time_now;
+   clock_t now = clock();
+   if (lastTime == 0) lastTime = now;
 
-        if (maze.whenSolved && (time_now - maze.whenSolved < howLongShowSolved * CLOCKS_PER_SEC)) {
-           minutes = maze.lastSolvedTime / (CLOCKS_PER_SEC * 60);
-           sprintf(solvingStatus, "SOLVED in %d:%05.2f %s", minutes,
-              (maze.lastSolvedTime + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC,
-              maze.newBest ? "-- ** New best time! **" : "");
-        } else {
-            celebrating = false;
-            if (maze.whenEntered) {
-               minutes = (time_now - maze.whenEntered) / (CLOCKS_PER_SEC * 60);
-               sprintf(solvingStatus, "Solving: %d:%05.2f", minutes,
-                  (time_now - maze.whenEntered + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC);
-            }
-            else solvingStatus[0] = '\0';
-        }
-        createTextDLs(timeDL, true, solvingStatus);
+   if (maze.whenSolved && (now - maze.whenSolved < howLongShowSolved * CLOCKS_PER_SEC)) {
+      minutes = maze.lastSolvedTime / (CLOCKS_PER_SEC * 60);
+      sprintf(solvingStatus, "SOLVED in %d:%05.2f %s", minutes,
+         (maze.lastSolvedTime + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC,
+         maze.newBest ? "-- ** New best time! **" : "");
+   } else {
+      if (maze.whenEntered) {
+         minutes = (now - maze.whenEntered) / (CLOCKS_PER_SEC * 60);
+         sprintf(solvingStatus, "Solving: %d:%05.2f", minutes,
+            (now - maze.whenEntered + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC);
+      }
+      else solvingStatus[0] = '\0';
+   }
+   createTextDLs(timeDL, true, solvingStatus);
 
-	++frames;
-        // see http://bytes.com/forum/post832171-3.html regarding CLOCKS_PER_SEC and clock_t type.
-	// To update framerate more frequently, lower the right-hand side to e.g. (CLOCKS_PER_SEC / 2)
-	if(time_now - last_time > CLOCKS_PER_SEC / 8) {
-		// Calculate frames per second
-		// debugMsg("time_now: %d; last_time: %d; diff: %d; frames: %d\n", time_now, last_time, time_now - last_time, frames);
-		Cam.m_framerate = ((float)frames * CLOCKS_PER_SEC)/(time_now - last_time);
-                Cam.m_frametime = (time_now - last_time)/((float)frames * CLOCKS_PER_SEC);
-                if (Cam.m_framerate < Cam.m_minframerate) Cam.m_framerate = Cam.m_minframerate; // can't go too low or the following division will make things go wacky.
-                Cam.m_framerateAdjust = Cam.m_targetframerate / Cam.m_framerate;
-                // createTextDLs(fpsDL, "FPS: %2.2f\nFRA: %2.2f", Cam.m_framerate, Cam.m_framerateAdjust);
-                createTextDLs(fpsDL, true, "FPS: %2.2f", Cam.m_framerate);
+   ++frames;
+   // see http://bytes.com/forum/post832171-3.html regarding CLOCKS_PER_SEC and clock_t type.
+   // To update framerate more frequently, lower the right-hand side to e.g. (CLOCKS_PER_SEC / 2)
+   if(now - lastTime > CLOCKS_PER_SEC / 8) {
+      // Calculate frames per second
+      // debugMsg("now: %d; lastTime: %d; diff: %d; frames: %d\n", now, lastTime, now - lastTime, frames);
+      Cam.m_framerate = ((float)frames * CLOCKS_PER_SEC)/(now - lastTime);
+      Cam.m_frametime = (now - lastTime)/((float)frames * CLOCKS_PER_SEC);
+      if (Cam.m_framerate < Cam.m_minframerate) Cam.m_framerate = Cam.m_minframerate; // can't go too low or the following division will make things go wacky.
+      Cam.m_framerateAdjust = Cam.m_targetframerate / Cam.m_framerate;
+      // createTextDLs(fpsDL, "FPS: %2.2f\nFRA: %2.2f", Cam.m_framerate, Cam.m_framerateAdjust);
+      createTextDLs(fpsDL, true, "FPS: %2.2f", Cam.m_framerate);
 
-                last_time = time_now;
-		frames = 0;
-	}
+      lastTime = now;
+      frames = 0;
+   }
 
-        if (showStatus) createTextDLs(statusDL, true, statusText());
+   if (showStatus) createTextDLs(statusDL, true, statusText());
 
-	// Thanks to: http://glprogramming.com/red/chapter08.html#name1
-	// and http://www.lighthouse3d.com/opengl/glut/index.php?bmpfontortho
-	setOrthographicProjection();
-	glPushMatrix();
-	glLoadIdentity();
+   // Thanks to: http://glprogramming.com/red/chapter08.html#name1
+   // and http://www.lighthouse3d.com/opengl/glut/index.php?bmpfontortho
+   setOrthographicProjection();
+   glPushMatrix();
+   glLoadIdentity();
 
-	if (showFPS) glCallList(fpsDL);
-	if (showHelp) glCallList(helpDL);
-        if (showScores) glCallList(scoreListDL);
-        //TODO: scroll score list if too large
-        glCallList(timeDL);
-        if (showStatus) glCallList(statusDL);
+   if (showFPS) glCallList(fpsDL);
+   if (showHelp) glCallList(helpDL);
+   if (showScores) glCallList(scoreListDL);
+   //TODO: scroll score list if too large
+   glCallList(timeDL);
+   if (showStatus) glCallList(statusDL);
 
-	glPopMatrix();
-	resetPerspectiveProjection();	
+   glPopMatrix();
+   resetPerspectiveProjection();	
 }
 
 GLvoid ReSizeGLScene(GLsizei width, GLsizei height)		// Resize And Initialize The GL Window
@@ -1092,7 +1096,7 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
 
    glEnable(GL_TEXTURE_2D);							// Enable Texture Mapping
    glBlendFunc(GL_SRC_ALPHA, GL_ONE);					// Set The Blending Function For Translucency
-   glClearColor(0.85f, 0.9f, 1.0f, 0.0f);				// Set the background color (sky blue)
+   glClearColor(0.5, 0.5, 0.5, 1.0);				// Set the background color (sky blue)
    glClearDepth(1.0);									// Enables Clearing Of The Depth Buffer
    glDepthFunc(GL_LESS);								// The Type Of Depth Test To Do
    glEnable(GL_DEPTH_TEST);							// Enables Depth Testing
@@ -1105,6 +1109,8 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
    gluQuadricNormals(quadric, GLU_SMOOTH);	// Create Smooth Normals ( NEW )
    // gluQuadricTexture(quadric, GL_TRUE);		// Create Texture Coords ( NEW )
 
+   level = 1;
+   maze.setDims(2, 2, 2, 2);
    SetupWorld();
 
    // Create display lists for help and fps
@@ -1210,8 +1216,8 @@ void drawSkyBox(void) {
     glPopMatrix();
 }
 
-// draw a quad that covers whole window, with given brightness and opacity
-void drawWindowQuad(float brightness, float alpha) {
+// draw a quad that covers whole window, with given color and opacity
+void drawWindowQuad(float alpha, float r = 1.0, float g = 1.0, float b = 1.0) {
 
    glPushMatrix();
    glLoadIdentity();
@@ -1222,7 +1228,7 @@ void drawWindowQuad(float brightness, float alpha) {
 
    glBegin(GL_QUADS);
       //glColor4f(0.8f, 0.8f, 1.0f, alpha);
-      glColor4f(brightness, brightness, brightness, alpha); 
+      glColor4f(r, g, b, alpha); 
       glVertex3f(1.15f, 1.15f, -2.0f);
       glVertex3f(-1.15f, 1.15f, -2.0f);
       glVertex3f(-1.15f, -1.15f, -2.0f);
@@ -1232,20 +1238,33 @@ void drawWindowQuad(float brightness, float alpha) {
    glEnable(GL_DEPTH_TEST);
    glPopMatrix();
 }
-void celebrationEffect() {
-   clock_t time_now = clock();
+
+// Fade in or out by putting a semitransparent rectangle in front of the camera.
+void fadingEffect(void) {
+   clock_t now = clock();
+   unsigned long timeLeft = fadeTill - now;
+
+   // ramp transparency from 1 down to 0, and back up.
+   float ramp = ((float)timeLeft) / durFade;
+
+   // Thanks to http://steinsoft.net/index.php?site=Programming/Code%20Snippets/OpenGL/no1 for this idea:
+   // Draw a quad in front of the camera and modulate its transparency.
+   drawWindowQuad(gameState == fadingIn ? ramp : 1.0 - ramp);
+}
+
+// like fading in, but also flash on and off.
+void celebrationEffect(void) {
+   clock_t now = clock();
    const int scaleFactor = 10;
    const float maxAlpha = 0.7;
-   unsigned int flashCount = (time_now - maze.whenSolved) * scaleFactor / CLOCKS_PER_SEC;
+   unsigned int flashCount = (now - maze.whenSolved) * scaleFactor / CLOCKS_PER_SEC;
    if (flashCount > 3 * scaleFactor) return; // don't flash quite as long as we display score
    // ramp alpha from max down to 0; alternate ramp with 0 (full transparency).
    float alpha = ((flashCount + 1) % 2) * maxAlpha * (howLongShowSolved * scaleFactor - flashCount) / (howLongShowSolved * scaleFactor);
    // debugMsg("flashCount: %d; alpha: %f\n", flashCount, alpha);
 
-   // Thanks to http://steinsoft.net/index.php?site=Programming/Code%20Snippets/OpenGL/no1 for this idea:
-   // Draw a quad in front of the camera and modulate its transparency.
-   float brightness = alpha + 1 - maxAlpha; // fade quad from white to almost-black
-   drawWindowQuad(brightness, alpha);
+   float brightness = alpha + 1 - maxAlpha; // fade quad from bright yellow to almost-black
+   drawWindowQuad(alpha, brightness, brightness, brightness);
 }
 
 // draw a quad that is centered in the window, with given texture
@@ -1256,12 +1275,13 @@ void drawCenterQuad(GLuint texture = GL_NONE) {
    glDisable(GL_DEPTH_TEST);
    glBindTexture(GL_TEXTURE_2D, texture);
 
+   const float z = -2.0;
    glBegin(GL_QUADS);
       glColor3f(1.0, 1.0, 1.0);
-      glTexCoord2f(1.0, 1.0); glVertex3f( 0.75,  0.6, -2.0);
-      glTexCoord2f(0.0, 1.0); glVertex3f(-0.75,  0.6, -2.0);
-      glTexCoord2f(0.0, 0.0); glVertex3f(-0.75, -0.6, -2.0);
-      glTexCoord2f(1.0, 0.0); glVertex3f( 0.75, -0.6, -2.0);
+      glTexCoord2f(1.0, 1.0); glVertex3f( 0.75,  0.6, z);
+      glTexCoord2f(0.0, 1.0); glVertex3f(-0.75,  0.6, z);
+      glTexCoord2f(0.0, 0.0); glVertex3f(-0.75, -0.6, z);
+      glTexCoord2f(1.0, 0.0); glVertex3f( 0.75, -0.6, z);
    glEnd();
 
    glEnable(GL_DEPTH_TEST);
@@ -1301,6 +1321,9 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
       if (!LoadGLTextures()) return false;
 
       // continue now with your regularly scheduled rendering.
+      gameState = fadingIn;
+      fadeTill = clock() + durFade;
+
    }
 
    if (blend) {			// ? do polygon anti-aliasing, a la http://glprogramming.com/red/chapter06.html#name2
@@ -1413,7 +1436,8 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
    maze.ccExit.drawExit(maze.exitWall, false);
 
    // if just solved the maze, flash the screen
-   if (celebrating) celebrationEffect();
+   if (gameState == celebrating) celebrationEffect();
+   else if (gameState == fadingIn || gameState == fadingOut) fadingEffect();
 
    drawText(); // draw any needed screen text, such as FPS
 
@@ -1731,7 +1755,7 @@ void handleArgs(int argc, LPWSTR *argv) {
                maze.branchClustering = _wtoi(argv[++i]);
                continue;
             case 'r':
-               srand((int)time(0));
+               srand((int)(clock() % 3));
                maze.randomizeDims();
                continue;
             case 'h':
@@ -1775,6 +1799,9 @@ int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 		return 0;									// Quit If Window Was Not Created
 	}
 
+        gameState = fadingIn;
+        fadeTill = clock() + durFade;
+
 	while(!done)									// Loop That Runs While done=FALSE
 	{
 		if (PeekMessage(&msg,NULL,0,0,PM_REMOVE))	// Is There A Message Waiting?
@@ -1802,8 +1829,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 				if (CheckKeys()) done = true;
 				else CheckMouse();
 				if (autopilotMode) ap->run();
-                                if (celebrating && maze.whenSolved && (clock() - maze.whenSolved >= howLongShowSolved * CLOCKS_PER_SEC))
-                                   nextLevel();
+                                sequence();
 			}
 		}
 	}
@@ -2231,3 +2257,38 @@ void setAutopilotMode(bool newAP) {
 		ap->addMove(Autopilot::Forward);
 	}
 }
+
+// Process timed sequence of state changes, e.g. segue from finished maze to fade-out to new level to fade-in.
+// Graphic effects based on state are not handled here but under DrawGLScene().
+void sequence(void) {
+   clock_t now = clock();
+
+   switch(gameState) {
+      case celebrating:
+         if (now - maze.whenSolved >= howLongShowSolved * CLOCKS_PER_SEC) {
+            gameState = fadingOut;
+            fadeTill = now + durFade;
+         }
+         break;
+      case fadingOut:
+         if (now >= fadeTill) {
+            nextLevel();
+            gameState = fadingIn;
+            fadeTill = now + durFade;
+         }
+         break;
+      case fadingIn:
+         if (now >= fadeTill) {
+            gameState = playing;
+         }
+         break;
+      case playing:
+         break;
+      case autopilot:
+         break;
+      default:
+         debugMsg("Unknown game state in sequence(): %d\n", gameState);
+   }
+   return;
+}
+
