@@ -1,11 +1,12 @@
  * To do:
- - add a key (maybe ') to toggle "developer" mode and enable certain commands, such as:
- - add a key (e.g. 's') to 'solve' the current level and advance to the next one.
+ x add a key (maybe F7) to toggle "developer" mode and enable certain commands, such as:
+ x add a key (e.g. '+') to 'solve' the current level and advance to the next one.
    - could do it by jumping to just inside the exit, with the right state enabled; or just do it.
- -q fix bug where score doesn't get recognized; maybe because dims are in different order from in score list.
- - fade to white at end of level, fade in from white at beginning.
+ xq* fix bug where score doesn't get recognized; maybe because dims are in different order from in score list.
+ xq may need to change key for toggling help display; keycode for '/' may not apply to non-US keyboards.
+ x fade to white at end of level, fade in from white at beginning.
    - could do texture-loading while faded out!
- - have a flipped texture mode, where the skybox goes on the maze, and the wall textures go on the skybox!
+ - for fun: have a flipped texture mode, where the skybox goes on the maze, and the wall textures go on the skybox!
    - for that we may need to mipmap the sky textures after all.
  - might be fun to have bits of animation in the skybox... e.g. twinkling stars (careful to be in the sky!)
    or shooting stars... a flying bird if not too hard...
@@ -24,6 +25,9 @@
      a dozen segments, each of which is ~1/4 sec. This would let users know they're not just waiting
      b/c I wanted to make them wait. I currently have static "Loading..." msg, which is probably good enough
      for 4 seconds.
+ - might be fun, when you pass out the exit, to have the camera automatically turn to face the maze (center)
+   and fly away, letting maze recede in view (or more of maze come into view)
+   The complication here is avoiding collisions with maze parts.
    
  x test flash when new time - text centered right?
  xq* turn off mouse pointer when mouse grabbing
