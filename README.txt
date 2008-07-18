@@ -23,14 +23,13 @@ Find your way through the maze from the entrance (green ring) to the exit (red).
 Controls:
 
 Esc: exit
-?: toggle display of help text
+H: toggle display of help text
 WASD: move
 Arrow keys: turn
 Mouse: steer (if mouse grab is on)
 Home/End: go to maze entrance/exit
 
 Shift: toggle higher speed
-N: generate new maze
 M or mouse-click: toggle mouse grab*
 T: toggle display of framerate
 L: toggle display of best score list (arrow shows current maze config)
@@ -38,12 +37,16 @@ U: toggle status bar display
 G: toggle maze outline*
 F1: toggle full-screen mode
 
-C: toggle collision checking (allow passing through walls or not)*
 Space: stop and snap camera position/orientation to grid
+F7: toggle "developer" mode*
+N: generate new maze
 P: toggle autopilot (not yet implemented)*
+C: toggle collision checking (allow passing through walls or not)*
++: 'solve' current level instantly
 ???: show path from entrance to exit (not yet implemented)
 
-*The state of these settings will be reflected in a future status bar
+
+*The state of these settings is reflected in a status bar
 along bottom of window.
 
 

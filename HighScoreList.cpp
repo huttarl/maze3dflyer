@@ -6,7 +6,7 @@
 #include "HighScoreList.h"
 
 bool HighScoreList::addScore(char *dims, float t) {
-   debugMsg("Adding time: '%s' -> %f\n", dims, t);
+   debugMsg("Attempting to add time: '%s' -> %f\n", dims, t);
    p = highScoreMap.find(dims);
    if (p == highScoreMap.end() ||
       p->second > t) {

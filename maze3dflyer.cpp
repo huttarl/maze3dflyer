@@ -59,6 +59,7 @@ glCamera Cam;				// Our Camera for moving around and setting prespective
 							// on things.
 Autopilot *ap;				// autopilot instance
 GameState gameState = fadingIn;
+bool developerMode = false;
 
 HDC			hDC=NULL;		// Private GDI Device Context
 HGLRC		hRC=NULL;		// Permanent Rendering Context
@@ -124,7 +125,7 @@ static char helpText[] = "Find your way through the maze from the entrance (gree
 Controls:\n\
 \n\
 Esc: exit\n\
-?: toggle display of help text\n\
+H: toggle display of help text\n\
 WASD: move\n\
 Mouse: steer (if mouse grab is on)\n\
 Arrow keys: turn\n\
@@ -736,11 +737,12 @@ void renderBitmapLines(float x, float y, void *font, float lineSpacing, char *st
 // If the DL exists already, it will be replaced.
 GLvoid createTextDLs(GLuint DL, bool variableSpaced, const char *fmt, ...)
 {
-   char text[1024];								// Holds Our String
+   char text[4096];								// Holds Our String
    float x, y, w, h;
    const int lineHeight = 24;
    va_list		ap;										// Pointer To List Of Arguments
-      
+   void *glutFont = variableSpaced ? GLUT_BITMAP_HELVETICA_18 : GLUT_BITMAP_9_BY_15;
+
    if (fmt == NULL)		// If There's No Text
       return;											// Do Nothing
 
@@ -760,8 +762,10 @@ GLvoid createTextDLs(GLuint DL, bool variableSpaced, const char *fmt, ...)
       x = xRes - 100, y = yRes - lineHeight/2 + 2;
          //TODO ###: could count lines and columns in text and adjust y to yRes - lineHeight * lines and x to xRes - 10 * columns.
    else if (DL == timeDL) { // position of timer text
-      if (gameState == celebrating)
-         x = xRes / 2 - 9*strlen(text)/2, y = yRes/2 - lineHeight*2;
+      if (gameState == celebrating) {
+         glutFont = GLUT_BITMAP_TIMES_ROMAN_24;
+         x = xRes / 2 - 15*strlen(text)/2, y = yRes/2 - lineHeight*2;
+      }
       else
          x = 5, y = yRes - lineHeight/2 + 2;
    }
@@ -774,11 +778,7 @@ GLvoid createTextDLs(GLuint DL, bool variableSpaced, const char *fmt, ...)
    glNewList(DL, GL_COMPILE);
    if (*text) {
       glColor3f(1.0f, 0.9f, 0.7f);
-      if (variableSpaced)
-         renderBitmapLines(x, y, GLUT_BITMAP_HELVETICA_18, lineHeight, text, &w, &h);
-      else {
-         renderBitmapLines(x, y, GLUT_BITMAP_9_BY_15, lineHeight, text, &w, &h); // need monospace font for right-justifying scores
-      }
+      renderBitmapLines(x, y, glutFont, lineHeight, text, &w, &h);
 
       // background rectangle
       // Do we need to go slightly backwards in z first? It seems to work without that...
@@ -985,16 +985,18 @@ void celebrateSolution() {
 char *statusText(void) {
    static char buf[1024];
    char *dims = highScoreList.dims(maze);
-   float scoreToBeat = highScoreList.getHighScore(dims);
+   // For scoreToBeat, must use normalized dims string.
+   float scoreToBeat = highScoreList.getHighScore(highScoreList.dims(maze, true));
 
-   sprintf(buf, "L%d: %s.  Passages: %d.  Best time: %s.   %s %s %s %s %s", //  <%d %d %d>
+   sprintf(buf, "L%d: %s.  Passages: %d.  Best time: %s.   %s%s%s%s%s%s", //  <%d %d %d>
       level, dims, maze.numPassageCells,
       HighScoreList::formatTime(scoreToBeat, false),
-      mouseGrab ? "[M]" : "",
-      maze.checkCollisions ? "" : "[C]", // hide from beginners
-      highSpeed ? "[H]" : "",
-      drawOutline ? "[G]" : "",
-      autopilotMode ? "[P]" : ""
+      mouseGrab ? " [M]" : "",
+      highSpeed ? " [H]" : "",
+      drawOutline ? " [G]" : "",
+      autopilotMode ? " [P]" : "",
+      developerMode ? " [D]" : "",
+      maze.checkCollisions ? "" : " [C]" // hide from beginners
       //debugging:
       // , int(Cam.m_Position.x), int(Cam.m_Position.y), int(Cam.m_Position.z)
       );
@@ -1954,8 +1956,7 @@ bool CheckKeys(void) {
 	{
 		// toggle collision checks
 		keysStillDown['C']=TRUE;
-		maze.checkCollisions = !maze.checkCollisions;
-		// should we give some visual feedback?
+		if (developerMode) maze.checkCollisions = !maze.checkCollisions;
 	}
 	else if (!keysDown['C'])
 	{
@@ -1979,16 +1980,16 @@ bool CheckKeys(void) {
 		keysStillDown[VK_SHIFT]=FALSE;
 	}
 
-	// '/?' key: toggle help display
-	// Good grief, all we can call this is OEM_2?
-	if (keysDown[VK_OEM_2] && !keysStillDown[VK_OEM_2]) {
-		keysStillDown[VK_OEM_2]=TRUE;
+	// 'H' key: toggle help display
+	// Was '/?', but that's VK_OEM_2, which may not be portable.
+	if (keysDown['H'] && !keysStillDown['H']) {
+		keysStillDown['H']=TRUE;
 		showHelp = !showHelp;
 		// if (showHelp) showFPS = false;
 	}
-	else if (!keysDown[VK_OEM_2])
+	else if (!keysDown['H'])
 	{
-		keysStillDown[VK_OEM_2]=FALSE;
+		keysStillDown['H']=FALSE;
 	}
 
         // 'T' key: toggle fps display
@@ -2044,6 +2045,32 @@ bool CheckKeys(void) {
 	{
 		keysStillDown['N']=FALSE;
 	}
+
+   if (keysDown[VK_F7] && !keysStillDown[VK_F7])
+   {
+      keysStillDown[VK_F7]=TRUE;
+
+      developerMode = !developerMode;
+   }
+   else if (!keysDown[VK_F7])
+   {
+      keysStillDown[VK_F7]=FALSE;
+   }
+
+   if (keysDown[VK_OEM_PLUS] && !keysStillDown[VK_OEM_PLUS])
+   {
+      keysStillDown[VK_OEM_PLUS]=TRUE;
+
+      if (developerMode) {
+         maze.hasFoundExit = false;
+         celebrateSolution();
+         maze.whenEntered = 0;
+      }
+   }
+   else if (!keysDown[VK_OEM_PLUS])
+   {
+      keysStillDown[VK_OEM_PLUS]=FALSE;
+   }
 
 	/* Old code from lesson10:
 	if (keysDown[VK_UP])
