@@ -39,11 +39,12 @@ F1: toggle full-screen mode
 
 Space: stop and snap camera position/orientation to grid
 F7: toggle "developer" mode*
-N: generate new maze
-P: toggle autopilot (not yet implemented)*
+N: generate new maze of same dimensions
 C: toggle collision checking (allow passing through walls or not)*
 +: 'solve' current level instantly
+K: sKip current level (fast)
 ???: show path from entrance to exit (not yet implemented)
+P: toggle autopilot (not yet implemented)*
 
 
 *The state of these settings is reflected in a status bar

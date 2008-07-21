@@ -664,7 +664,7 @@ bool LoadGLTextures()                                    // Load images and conv
 
 #ifdef USE_JPG
    status = loadMazeTexture(wall1, "Data/brickWall_tileable.jpg") && loadMazeTexture(ground, "Data/carpet-6716-2x2mir.jpg")
-      && loadMazeTexture(wall2, "Data/rocky.jpg") && loadMazeTexture(roof, "Data/roof1.jpg") && loadMazeTexture(portal, "Data/wood-planks-4227.jpg");
+      && loadMazeTexture(wall2, "Data/cement-ao5b-gs.jpg") && loadMazeTexture(roof, "Data/roof1.jpg") && loadMazeTexture(portal, "Data/wood-planks-4227.jpg");
 #else
    status = loadMazeTexture(wall1, "Data/brickWall_tileable.bmp") && loadMazeTexture(ground, "Data/carpet-6716-2x2mir.bmp")
       && loadMazeTexture(wall2, "Data/rocky.bmp") && loadMazeTexture(roof, "Data/roof1.bmp") && loadMazeTexture(portal, "Data/wood-planks-4227.bmp");
