@@ -1,4 +1,9 @@
  * To do:
+ - fix random # function for sparsity - goes too high too often
+ - better texture than rock: not so glaringly repeating
+ x- need to do something about score list that scrolls off bottom of screen.
+   Center it around current maze dim?
+   - could do sthg better when doing a never-before dim
  x add a key (maybe F7) to toggle "developer" mode and enable certain commands, such as:
  x add a key (e.g. '+') to 'solve' the current level and advance to the next one.
    - could do it by jumping to just inside the exit, with the right state enabled; or just do it.
