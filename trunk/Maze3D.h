@@ -9,7 +9,7 @@
 
 class Maze3D {
 public:
-   const static int wMax = 20, hMax = 20, dMax = 20;	// This is necessary because C++ doesn't do fully dynamic
+   const static int wMax = 30, hMax = 30, dMax = 30;	// This is necessary because C++ doesn't do fully dynamic
 										          // multidimensional arrays. I've been spoiled by Java.
 
    // The following probably belong in a Maze class.

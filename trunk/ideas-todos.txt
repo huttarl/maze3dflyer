@@ -1,6 +1,7 @@
  * To do:
- - fix random # function for sparsity - goes too high too often
- - better texture than rock: not so glaringly repeating
+ - detect when we're going to overflow max maze size.
+ x fix random # function for sparsity - goes too high too often
+ x better texture than rock: not so glaringly repeating
  x- need to do something about score list that scrolls off bottom of screen.
    Center it around current maze dim?
    - could do sthg better when doing a never-before dim
@@ -152,7 +153,7 @@
 	 - see http://glprogramming.com/red/chapter06.html
    - fog
    - lighting (shadow) (lightmapping?) bump mapping?
-   -* skybox / sky sphere (http://gpwiki.org/index.php/Sky_Box, http://www.mindcontrol.org/~hplus/graphics/skybox.html,
+   x* skybox / sky sphere (http://gpwiki.org/index.php/Sky_Box, http://www.mindcontrol.org/~hplus/graphics/skybox.html,
 	   http://www.morrowland.com/apron/tutorials/gl/gl_skybox.zip
 	   - allow switching skybox: e.g. use day/clouds, night/stars, mountains/lake, etc.
 	   - can we use scenery from Stellarium? Stellarium "old-style" landscapes have a ground image and multiple side images; no top.
@@ -168,7 +169,7 @@
 		x use outsidePositive to determine texture
      - higher-res ceiling texture
 	 - ?make them bigger and extend over multiple cubes (requires matching them up?)
-	 - rock: need smaller scale, higher res
+	 x rock: need smaller scale, higher res
 	 x brick: need more variation among bricks
 	 - I lowered the contrast because they were glaring, but now they look washed-out.
    xq have entrance/exit discs rotate with system time
@@ -186,7 +187,8 @@
 	 - maze size (w,d,h) (expect O(w*d*h))
 	 - it would probably be faster to check for sparsity collisions by iterating through a list of non-passage
 		cells in the maze, rather than through the whole hemicube of cells within sparsity range.
-		- could even do an octree thing to speed up.
+		- could even do an octree thing to speed up. Doesn't seem to be a performance problem yet, but I haven't tried
+		 really big mazes.
    - profile the app in general, finding performance/rendering bottlenecks
    - investigate OpenGL optimizations, like
      - display lists for like-textured quads
