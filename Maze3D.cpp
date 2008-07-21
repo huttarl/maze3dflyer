@@ -63,12 +63,14 @@ void Maze3D::incrementDims(int level) {
    int minDim = min(w, min(h, d));
    if (minDim < 3) sparsity = 2;
    else {
-      // This is my pseudoscientific, lazy attempt at approximating a normal distribution.
-      // r is a number in [0,1]
+      // This is my pseudoscientific attempt at approximating a normal distribution.
+      // r is a number in [0,1], normal distribution
       float r = ((rand() % 98) + (rand() % 99) + 0.0) / 195.0;
+      // Put the bump at the low end, not in the middle.
+      r = abs(r - 0.5) * 2.0;
       // bias against the highest number (minDim) by subtracting an extra 0.2.
       // round the result by adding 0.5 and casting to int.
-      sparsity = int(2.0 + (minDim - 2.2) * r + 0.5);
+      sparsity = int(2.0 + (minDim - 2.0) * r + 0.5);
    }
 }
 

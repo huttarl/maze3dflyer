@@ -27,7 +27,7 @@
 #include <gl/glu.h>			// 
 #include <gl/glut.h>		// (glut.h actually includes gl and glu.h, so we're redundant)
 
-// #define USE_JPG // Use BMP format or JPG?
+#define USE_JPG // Use BMP format or JPG?
 
 #define DEBUGGING 1
 #define PROFILING 1 // enable some profiling
@@ -489,9 +489,9 @@ void SetupWorld()
    // Now set up our max values for the camera
    Cam.m_MaxVelocity = maze.wallMargin * 0.5f; //TODO: make this changeable by keyboard
    Cam.m_MaxAccel = Cam.m_MaxVelocity * 0.5f;
-   Cam.m_MaxPitchRate = 2.0f;
+   Cam.m_MaxPitchRate = 3.0f;
    Cam.m_MaxPitch = 89.9f;
-   Cam.m_MaxHeadingRate = 2.0f;
+   Cam.m_MaxHeadingRate = 3.0f;
    //Cam.m_PitchDegrees = 0.0f;
    //Cam.m_HeadingDegrees = 0.0f;
    //Cam.m_Position.x = 0.0f * maze.cellSize;
@@ -764,7 +764,7 @@ GLvoid createTextDLs(GLuint DL, bool variableSpaced, const char *fmt, ...)
    else if (DL == timeDL) { // position of timer text
       if (gameState == celebrating) {
          glutFont = GLUT_BITMAP_TIMES_ROMAN_24;
-         x = xRes / 2 - 15*strlen(text)/2, y = yRes/2 - lineHeight*2;
+         x = xRes / 2 - 12*strlen(text)/2, y = yRes/2 - lineHeight*2;
       }
       else
          x = 5, y = yRes - lineHeight/2 + 2;
@@ -1971,8 +1971,8 @@ bool CheckKeys(void) {
                 Cam.m_MaxVelocity = maze.wallMargin * (highSpeed ? 1.0 : 0.5);
                 //Cam.m_MaxHeadingRate = 
                 //   Cam.m_MaxPitchRate =
-                Cam.m_MaxPitchRate = (highSpeed ? 5.0 : 2.0);
-                Cam.m_MaxHeadingRate = (highSpeed ? 5.0 : 2.0);
+                Cam.m_MaxPitchRate = (highSpeed ? 5.0 : 3.0);
+                Cam.m_MaxHeadingRate = (highSpeed ? 5.0 : 3.0);
 
 	}
 	else if (!keysDown[VK_SHIFT])
@@ -2029,7 +2029,7 @@ bool CheckKeys(void) {
 		keysStillDown['L']=TRUE;
 		showScores = !showScores;
 		if (showScores)
-                   createTextDLs(scoreListDL, false, highScoreList.toString(maze));
+                   createTextDLs(scoreListDL, false, highScoreList.toString(maze, yRes / 24 - 3));
 	}
 	else if (!keysDown['L'])
 	{
@@ -2070,6 +2070,23 @@ bool CheckKeys(void) {
    else if (!keysDown[VK_OEM_PLUS])
    {
       keysStillDown[VK_OEM_PLUS]=FALSE;
+   }
+
+   if (keysDown['K'] && !keysStillDown['K'])
+   {
+      keysStillDown['K']=TRUE;
+
+      if (developerMode) {
+         nextLevel();
+         gameState = fadingIn;
+         fadeTill = clock() + durFade;
+         if (showScores)
+            createTextDLs(scoreListDL, false, highScoreList.toString(maze, yRes / 24 - 3));
+      }
+   }
+   else if (!keysDown['K'])
+   {
+      keysStillDown['K']=FALSE;
    }
 
 	/* Old code from lesson10:
@@ -2300,6 +2317,8 @@ void sequence(void) {
       case fadingOut:
          if (now >= fadeTill) {
             nextLevel();
+            if (showScores)
+               createTextDLs(scoreListDL, false, highScoreList.toString(maze, yRes / 24 - 3));
             gameState = fadingIn;
             fadeTill = now + durFade;
          }

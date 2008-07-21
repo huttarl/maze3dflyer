@@ -59,17 +59,53 @@ char *HighScoreList::formatTime(float t, bool rightJustify) {
    }
 }
 
-char *HighScoreList::toString(Maze3D &maze) {
-   static char buf[2048], line[30];
-   int chars = 0;
-   char *curDims = dims(maze, true);
-   char *s = buf + sprintf(buf, "     Maze size:   Best time:\n\n");
+// return the position of dims in the high score list. -1 if not present.
+int HighScoreList::getPosition(char *dims) {
+   int n = (int)highScoreMap.size();
+   for (p = highScoreMap.find(dims); p != highScoreMap.end(); p++)
+      n--;
+   return (n == highScoreMap.size() ? -1 : n);
+}
 
-   //TODO: order these by complexity or something.
-   for (p = highScoreMap.begin(); p != highScoreMap.end(); p++) {
-      chars = sprintf(line, "%s%11s %s\n",
-         !strcmp(p->first.c_str(), curDims) ? "-> " : "   ",
-         p->first.c_str(), formatTime(p->second));
+// render high score list to a string, using no more lines than linesAllowed.
+char *HighScoreList::toString(Maze3D &maze, int linesAllowed) {
+   static char buf[2048], line[30];
+   int chars = 0, lines = 0, currDimLine = 0, lineNum = 0;
+   int fromLine = 0, toLine = min(linesAllowed, (int)highScoreMap.size());
+   char *currDims = dims(maze, true);
+   char *s = buf + sprintf(buf, "     Maze size:   Best time:\n\n");
+   linesAllowed -= 2; // for title line and following blank lines
+   // trim to screen
+   if ((int)highScoreMap.size() > linesAllowed) {
+      currDimLine = getPosition(currDims);
+      if (currDimLine > -1) {
+         int l1 = linesAllowed/2;
+         int l2 = linesAllowed - l1; // different from l1, for odd numbers
+         fromLine = max(0, currDimLine - l1);
+         toLine = min(currDimLine + l2, (int)highScoreMap.size());
+         if (toLine - fromLine < linesAllowed)
+            fromLine = toLine < linesAllowed ? 0 : toLine - linesAllowed;
+         if (toLine - fromLine < linesAllowed)
+            toLine = fromLine + linesAllowed > (int)highScoreMap.size() ? (int)highScoreMap.size() : fromLine + linesAllowed;
+         debugMsg("currDimLine: %d ", currDimLine);
+      } else {
+         //TODO Would be nice to figure out, if currDims is not yet in score list, where it *would* fall,
+         // so we can show the scores around it.
+         fromLine = 0;
+         toLine = linesAllowed;
+      }
+   }
+   debugMsg("fromLine: %d, toLine: %d\n", fromLine, toLine);
+   for (p = highScoreMap.begin(); p != highScoreMap.end(); p++, lineNum++) {
+      if (lineNum < fromLine || lineNum >= toLine) continue;
+      if (!strcmp(p->first.c_str(), currDims)) {
+         currDimLine = lines;
+         chars = sprintf(line, "-> %11s %s\n",
+            p->first.c_str(), formatTime(p->second));
+      } else {
+         chars = sprintf(line, "   %11s %s\n",
+            p->first.c_str(), formatTime(p->second));
+      }
       if (chars > 0) {
          if (s - buf + chars >= sizeof(buf)) {
             debugMsg("Line '%s' would overflow high score list buffer! %d >= %d\n",
@@ -77,17 +113,21 @@ char *HighScoreList::toString(Maze3D &maze) {
             return buf; // don't overflow the buffer
          }
          strcpy(s, line);
+         lines++;
          s += chars;
       } // else should process failure in sprintf...
    }
    // debugMsg("High score list follows:\n%s\n", buf);
+
+
+
    return buf;
 }
 
 // load high scores from a file
 bool HighScoreList::load(void) {
    int count;
-   char dims[16];
+   char dims[32];
    float time;
 
    ifstream fp(filepath, ios::in);
