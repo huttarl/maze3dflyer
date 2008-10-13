@@ -83,6 +83,7 @@ bool	autopilotMode = false;		// autopilotMode on?
 bool	mouseGrab = true;		// mouse centering is on?
 bool	showFPS = false, showScores = false, showStatus = true; // whether to display framerate or score list
 bool	showHelp = true;		// show help text
+bool    autoForward = false;    // keep moving forward without holding down 'w'
 bool    drawOutline = true;
 bool    highSpeed = false;      // high-speed mode
 bool    flipTextures = false;   // exchange sky and maze textures
@@ -129,6 +130,7 @@ H: toggle display of help text\n\
 WASD: move\n\
 Mouse: steer (if mouse grab is on)\n\
 Arrow keys: turn\n\
+Q: toggle auto-forward (instead of holding down 'W')\n\
 Home/End: jump to maze entrance/exit\n\
 \n\
 N: new maze\n\
@@ -1842,6 +1844,15 @@ int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 	return ((int)msg.wParam);								// Exit The Program
 }
 
+#define checkKey(key, action)  \
+	if (keysDown[key] && !keysStillDown[key]) { \
+		keysStillDown[key] = true; \
+		action; \
+        } else if (!keysDown[key]) { \
+		keysStillDown[key] = false; \
+	}
+
+
 //TODO: factor out common code, particularly for keys that are not held down, such as SPACE.
 // Make an array appKeys[] = { VK_SPACE, 'F', ... }
 // then loop through the array.
@@ -1863,231 +1874,103 @@ bool CheckKeys(void) {
 	// Cam.m_SidewaysVelocity = 0.0f;
 
 	// Process WSAD (movement) keys. (Allow for dvorak layout too.)
-	if(keysDown['W'] || keysDown[VK_OEM_COMMA]) Cam.AccelForward(keyAccelRate);	
-	if(keysDown['S'] || keysDown['O']) Cam.AccelForward(-keyAccelRate);
+        if(keysDown['W'] || keysDown[VK_OEM_COMMA]) {
+           Cam.AccelForward(keyAccelRate);	
+           autoForward = false;
+        } else if(keysDown['S'] || keysDown['O']) {
+           Cam.AccelForward(-keyAccelRate);
+           autoForward = false;
+        } else if (autoForward) Cam.AccelForward(keyAccelRate);
+
 	if(keysDown['A']) Cam.AccelSideways(-keyAccelRate);
 	if(keysDown['D'] || keysDown['E']) Cam.AccelSideways(keyAccelRate);
 
 	// reset position / heading / pitch to the beginning of the maze.
-	if (keysDown[VK_HOME] && !keysStillDown[VK_HOME]) {
-		keysStillDown[VK_HOME]=TRUE;
-		maze.ccEntrance.standOutside(maze.entranceWall);
-	}
-	else if (!keysDown[VK_HOME])
-	{
-		keysStillDown[VK_HOME]=FALSE;
-	}
+        checkKey(VK_HOME, maze.ccEntrance.standOutside(maze.entranceWall));
 
 	// reset position / heading / pitch to the end of the maze.
-	if (keysDown[VK_END] && !keysStillDown[VK_END]) {
-		keysStillDown[VK_END]=TRUE;
-		maze.ccExit.standOutside(maze.exitWall);
-	}
-	else if (!keysDown[VK_END])
-	{
-		keysStillDown[VK_END]=FALSE;
-	}
+        checkKey(VK_END, maze.ccExit.standOutside(maze.exitWall));
 
 	// snap to grid
-	if (keysDown[VK_SPACE] && !keysStillDown[VK_SPACE]) {
-		keysStillDown[VK_SPACE]=TRUE;
-		Cam.SnapToGrid();
-	}
-	else if (!keysDown[VK_SPACE])
-	{
-		keysStillDown[VK_SPACE]=FALSE;
-	}
+        checkKey(VK_SPACE, (Cam.SnapToGrid(), autoForward = false));
 
-	if (keysDown['B'] && !keysStillDown['B'])
-	{
-		keysStillDown['B']=TRUE;
-		blend=!blend;
-		if (blend)
-		{
-			glEnable(GL_BLEND);
-			glEnable (GL_POLYGON_SMOOTH);
-			// glDisable(GL_DEPTH_TEST);
+        // toggle blending mode. This is deprecated.
+   //     checkKey('B', ((blend = !blend) ? (glEnable(GL_BLEND), glEnable (GL_POLYGON_SMOOTH), \
+			//glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST), \
+   //                     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)) : \
+   //                     (glDisable(GL_BLEND), glDisable(GL_POLYGON_SMOOTH), glEnable(GL_DEPTH_TEST))));
+	//if (keysDown['B'] && !keysStillDown['B'])
+	//{
+	//	keysStillDown['B']=TRUE;
+	//	blend=!blend;
+	//	if (blend)
+	//	{
+	//		glEnable(GL_BLEND);
+	//		glEnable (GL_POLYGON_SMOOTH);
+	//		// glDisable(GL_DEPTH_TEST);
 
-			glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			// was (GL_SRC_ALPHA_SATURATE, GL_ONE); see http://www.opengl.org/documentation/specs/man_pages/hardcopy/GL/html/gl/blendfunc.html
-			/* "Blend function (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) is
-				also useful for rendering antialiased points and lines in
-				arbitrary order.
-				Polygon antialiasing is optimized using blend function
-				(GL_SRC_ALPHA_SATURATE, GL_ONE) with polygons sorted from
-				nearest to farthest." */
-		}
-		else
-		{
-			glDisable(GL_BLEND);
-			glDisable(GL_POLYGON_SMOOTH);
-			glEnable(GL_DEPTH_TEST);
-		}
-	}
-	else if (!keysDown['B'])
-	{
-		keysStillDown['B']=FALSE;
-	}
+	//		glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+	//		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//		// was (GL_SRC_ALPHA_SATURATE, GL_ONE); see http://www.opengl.org/documentation/specs/man_pages/hardcopy/GL/html/gl/blendfunc.html
+	//		/* "Blend function (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) is
+	//			also useful for rendering antialiased points and lines in
+	//			arbitrary order.
+	//			Polygon antialiasing is optimized using blend function
+	//			(GL_SRC_ALPHA_SATURATE, GL_ONE) with polygons sorted from
+	//			nearest to farthest." */
+	//	}
+	//	else
+	//	{
+	//		glDisable(GL_BLEND);
+	//		glDisable(GL_POLYGON_SMOOTH);
+	//		glEnable(GL_DEPTH_TEST);
+	//	}
+	//}
+	//else if (!keysDown['B'])
+	//{
+	//	keysStillDown['B']=FALSE;
+	//}
 
-	if (keysDown['P'] && !keysStillDown['P'])
-	{
-		// toggle autopilotMode
-		keysStillDown['P']=TRUE;
-		setAutopilotMode(!autopilotMode);
-	}
-	else if (!keysDown['P'])
-	{
-		keysStillDown['P']=FALSE;
-	}
+        checkKey('P', setAutopilotMode(!autopilotMode));
 
-	if (keysDown['M'] && !keysStillDown['M'])
-	{
-		// toggle mouseGrab
-		keysStillDown['M']=TRUE;
-		mouseGrab = !mouseGrab;
-	}
-	else if (!keysDown['M'])
-	{
-		keysStillDown['M']=FALSE;
-	}
+        checkKey('M', (mouseGrab = !mouseGrab));
 
-	if (keysDown['C'] && !keysStillDown['C'])
-	{
-		// toggle collision checks
-		keysStillDown['C']=TRUE;
-		if (developerMode) maze.checkCollisions = !maze.checkCollisions;
-	}
-	else if (!keysDown['C'])
-	{
-		keysStillDown['C']=FALSE;
-	}
+        checkKey('C', (developerMode && (maze.checkCollisions = !maze.checkCollisions)));
 
-        if (keysDown[VK_SHIFT] && !keysStillDown[VK_SHIFT])
-	{
-		// toggle high speed
-		keysStillDown[VK_SHIFT]=TRUE;
-		highSpeed = !highSpeed;
-                Cam.m_MaxVelocity = maze.wallMargin * (highSpeed ? 1.0 : 0.5);
-                //Cam.m_MaxHeadingRate = 
-                //   Cam.m_MaxPitchRate =
-                Cam.m_MaxPitchRate = (highSpeed ? 5.0 : 3.0);
-                Cam.m_MaxHeadingRate = (highSpeed ? 5.0 : 3.0);
-
-	}
-	else if (!keysDown[VK_SHIFT])
-	{
-		keysStillDown[VK_SHIFT]=FALSE;
-	}
+        checkKey(VK_SHIFT, ((highSpeed = !highSpeed), \
+                (Cam.m_MaxVelocity = maze.wallMargin * (highSpeed ? 1.0 : 0.5)), \
+                (Cam.m_MaxPitchRate = (highSpeed ? 5.0 : 3.0)), \
+                (Cam.m_MaxHeadingRate = (highSpeed ? 5.0 : 3.0))));
 
 	// 'H' key: toggle help display
 	// Was '/?', but that's VK_OEM_2, which may not be portable.
-	if (keysDown['H'] && !keysStillDown['H']) {
-		keysStillDown['H']=TRUE;
-		showHelp = !showHelp;
-		// if (showHelp) showFPS = false;
-	}
-	else if (!keysDown['H'])
-	{
-		keysStillDown['H']=FALSE;
-	}
+        checkKey('H', (showHelp = !showHelp));
 
         // 'T' key: toggle fps display
-	if (keysDown['T'] && !keysStillDown['T']) {
-		keysStillDown['T']=TRUE;
-		showFPS = !showFPS;
-		// if (showFPS) showHelp = false;
-	}
-	else if (!keysDown['T'])
-	{
-		keysStillDown['T']=FALSE;
-	}
+        checkKey('T', (showFPS = !showFPS));
 
         // 'U' key: toggle status bar display
-	if (keysDown['U'] && !keysStillDown['U']) {
-		keysStillDown['U']=TRUE;
-		showStatus = !showStatus;
-		// if (showFPS) showHelp = false;
-	}
-	else if (!keysDown['U'])
-	{
-		keysStillDown['U']=FALSE;
-	}
+        checkKey('U', (showStatus = !showStatus));
 
         // 'G' key: toggle outline (edge) drawing
-	if (keysDown['G'] && !keysStillDown['G']) {
-		keysStillDown['G']=TRUE;
-		drawOutline = !drawOutline;
-	}
-	else if (!keysDown['G'])
-	{
-		keysStillDown['G']=FALSE;
-	}
+        checkKey('G', (drawOutline = !drawOutline));
 
 	// 'l' key: toggle score list display
-	if (keysDown['L'] && !keysStillDown['L']) {
-		keysStillDown['L']=TRUE;
-		showScores = !showScores;
-		if (showScores)
-                   createTextDLs(scoreListDL, false, highScoreList.toString(maze, yRes / 24 - 3));
-	}
-	else if (!keysDown['L'])
-	{
-		keysStillDown['L']=FALSE;
-	}
+        checkKey('L', (showScores = !showScores) ? createTextDLs(scoreListDL, false, highScoreList.toString(maze, yRes / 24 - 3)) : 0);
 
-	if (keysDown['N'] && !keysStillDown['N'])
-	{
-		keysStillDown['N']=TRUE;
-		newMaze();
-	}
-	else if (!keysDown['N'])
-	{
-		keysStillDown['N']=FALSE;
-	}
+        checkKey('N', newMaze());
 
-   if (keysDown[VK_F7] && !keysStillDown[VK_F7])
-   {
-      keysStillDown[VK_F7]=TRUE;
+        checkKey('Q', (autoForward = !autoForward));
+        // VK_OEM_7 is single-quote.
+        checkKey(VK_OEM_7, (autoForward = !autoForward));
 
-      developerMode = !developerMode;
-   }
-   else if (!keysDown[VK_F7])
-   {
-      keysStillDown[VK_F7]=FALSE;
-   }
+        // F7: toggle developer mode
+        checkKey(VK_F7, (developerMode = !developerMode));
 
-   if (keysDown[VK_OEM_PLUS] && !keysStillDown[VK_OEM_PLUS])
-   {
-      keysStillDown[VK_OEM_PLUS]=TRUE;
+        checkKey(VK_OEM_PLUS, (developerMode && ((maze.hasFoundExit = false), celebrateSolution(), (maze.whenEntered = 0))));
 
-      if (developerMode) {
-         maze.hasFoundExit = false;
-         celebrateSolution();
-         maze.whenEntered = 0;
-      }
-   }
-   else if (!keysDown[VK_OEM_PLUS])
-   {
-      keysStillDown[VK_OEM_PLUS]=FALSE;
-   }
-
-   if (keysDown['K'] && !keysStillDown['K'])
-   {
-      keysStillDown['K']=TRUE;
-
-      if (developerMode) {
-         nextLevel();
-         gameState = fadingIn;
-         fadeTill = clock() + durFade;
-         if (showScores)
-            createTextDLs(scoreListDL, false, highScoreList.toString(maze, yRes / 24 - 3));
-      }
-   }
-   else if (!keysDown['K'])
-   {
-      keysStillDown['K']=FALSE;
-   }
+        checkKey('K', (developerMode && (nextLevel(), (gameState = fadingIn), (fadeTill = clock() + durFade),
+           (showScores && (createTextDLs(scoreListDL, false, highScoreList.toString(maze, yRes / 24 - 3)), 0)))));
 
 	/* Old code from lesson10:
 	if (keysDown[VK_UP])
@@ -2115,12 +1998,12 @@ bool CheckKeys(void) {
 
 	if (keysDown[VK_PRIOR])
 	{
-		xheading-= 1.0f;
+		xheading -= 1.0f;
 	}
 
 	if (keysDown[VK_NEXT])
 	{
-		xheading+= 1.0f;
+		xheading += 1.0f;
 	}
 	*/
 
