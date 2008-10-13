@@ -1,5 +1,13 @@
  * To do:
- *- key, such as 'q', to toggle auto-forward mode. When this is on, it's like holding the 'w' key down.
+ - maybe have an "outside" view that lets you look at the maze from the outside, while you're inside?
+   Like Tab in Morrowind. Useful for big mazes.
+   Could implement as:
+     - save your current position / orientation ('mark') (don't save velocity)
+     - teleport you to outside maze
+     - show your saved position as some kind of glowing orb with glowing spines sticking out that penetrate maze walls. Should indicate orientation as well as location.
+     - let you zoom around but not into maze; maybe just rotate around at a fixed radius from center of maze
+     - exit mode by teleporting back to your saved position / orientation
+ *x key, such as 'q', to toggle auto-forward mode. When this is on, it's like holding the 'w' key down.
    Like in Morrowind. This is canceled by pressing 'w', 's', or stop (space?)
  - detect when we're going to overflow max maze size.
  x fix random # function for sparsity - goes too high too often
@@ -9,13 +17,14 @@
    - could do sthg better when doing a never-before dim
  x add a key (maybe F7) to toggle "developer" mode and enable certain commands, such as:
  x add a key (e.g. '+') to 'solve' the current level and advance to the next one.
-   - could do it by jumping to just inside the exit, with the right state enabled; or just do it.
+   x could do it by jumping to just inside the exit, with the right state enabled; or just do it.
  xq* fix bug where score doesn't get recognized; maybe because dims are in different order from in score list.
  xq may need to change key for toggling help display; keycode for '/' may not apply to non-US keyboards.
  x fade to white at end of level, fade in from white at beginning.
    - could do texture-loading while faded out!
  - for fun: have a flipped texture mode, where the skybox goes on the maze, and the wall textures go on the skybox!
    - for that we may need to mipmap the sky textures after all.
+   - and more importantly, we might have to differentiate between north and south walls, and btwn east and west walls, as I don't think we do now.
  - might be fun to have bits of animation in the skybox... e.g. twinkling stars (careful to be in the sky!)
    or shooting stars... a flying bird if not too hard...
  - could make maxvel increase as we get further from the maze.
@@ -35,7 +44,9 @@
      for 4 seconds.
  - might be fun, when you pass out the exit, to have the camera automatically turn to face the maze (center)
    and fly away, letting maze recede in view (or more of maze come into view)
-   The complication here is avoiding collisions with maze parts.
+   The complication here is avoiding collisions with maze parts. But if we face the very center of the maze, not
+   the exit, we're unlikely to hit maze parts.
+
    
  x test flash when new time - text centered right?
  xq* turn off mouse pointer when mouse grabbing
@@ -83,7 +94,7 @@
  x 'n' command to create new maze with current parameters.
  - maybe add a "rear view mirror"?
  x big complex mazes will be more "legible" if there is a solid dark line along all outer edges
-   - maybe a grid, so there are lines even between cells? but not in open space
+   x maybe a grid, so there are lines even between cells? but not in open space
    x how to draw so that it's visible, regardless of adjacent walls? make a 4-sided "diamond"-cross-section square prism around the line?
      (with width = epsilon) Such a line would also be visible inside the maze.
      - or this: iterate through edge segments;
@@ -91,7 +102,7 @@
        - if current segment is external-concave edge, draw external 1 side of square prism;
        - otherwise, draw nothing (e.g. if current segment borders no walls, or two coplanar walls, or 4 walls)
        - for this purpose, exit/entrance facade counts as a wall?
-   - it could be created once as a display list, since the maze never changes.
+   x it could be created once as a display list, since the maze never changes.
    x right now just doing it as lines (not quads)
    x Lines on concave corners appear only sometimes.
      Could try a higher line thickness to see if that helps, but don't want them too heavy.
@@ -125,7 +136,7 @@
      x most of this is done.
    ##x make sure all code is properly attributed.
      Should be limited to those at the top of Maze3DSSaver.cpp
-   - I'm not really using jpeg.cpp / jpeg.h, except that jpeg.h has #pragma comment(lib, "lib/jpeg.lib")
+   x I'm not really using jpeg.cpp / jpeg.h, except that jpeg.h has #pragma comment(lib, "lib/jpeg.lib")
      lib/jpeg.lib seems to be used only for LoadBMP(). I should either
       - factor out LoadBMP (I believe the code is available on Nehe?) and get rid of jpeg.{cpp,h,lib}, or
       ##*- actually use jpeg.lib and have jpg textures instead of BMP. jgp textures would be under 1/10th the size of BMP!
