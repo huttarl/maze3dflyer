@@ -27,6 +27,7 @@ H: toggle display of help text
 WASD: move
 Arrow keys: turn
 Mouse: steer (if mouse grab is on)
+Q: toggle auto-forward (instead of holding down 'W')
 Home/End: go to maze entrance/exit
 
 Shift: toggle higher speed
@@ -45,7 +46,6 @@ C: toggle collision checking (allow passing through walls or not)*
 K: sKip current level (fast)
 ???: show path from entrance to exit (not yet implemented)
 P: toggle autopilot (not yet implemented)*
-
 
 *The state of these settings is reflected in a status bar
 along bottom of window.

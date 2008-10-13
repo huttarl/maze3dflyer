@@ -1,4 +1,6 @@
  * To do:
+ *- key, such as 'q', to toggle auto-forward mode. When this is on, it's like holding the 'w' key down.
+   Like in Morrowind. This is canceled by pressing 'w', 's', or stop (space?)
  - detect when we're going to overflow max maze size.
  x fix random # function for sparsity - goes too high too often
  x better texture than rock: not so glaringly repeating
