@@ -32,6 +32,7 @@ Maze3D::Maze3D(int _w, int _h, int _d, int _s, int _b) {
    xWalls = NULL;
    yWalls = NULL;
    zWalls = NULL;
+   solutionRoute = NULL;
 }
 
 // setDims should be called only before SetupWorld().
@@ -171,6 +172,8 @@ void Maze3D::drawOutline(void) {
    // for smooth lines, need to turn on blending.
    // see http://www.opengl.org/resources/faq/technical/rasterization.htm#rast0150
    glColor3f(0.3, 0.3, 0.3);
+   glLineWidth(1.0); // for outline. 1 is default anyway.
+
 #ifdef OutlineWithLines
    glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT);
    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -189,4 +192,125 @@ void Maze3D::drawOutline(void) {
    glEnd(); // GL_LINES
    glPopAttrib();   
 #endif //OutlineWithLines
+}
+
+// draw lines along solution route
+void Maze3D::drawSolutionRoute(void) {
+   // yellowish lines
+   glColor3f(1.0, 1.0, 0.7);
+   // Here we set a constant line width.
+   // Problem is that this is not perspective-correct: the width of a nearby line appears
+   // the same as that of a far-off line.
+   // However, since the solution route is mostly hidden inside the maze, the discrepancy shouldn't
+   // be too obvious.
+
+#ifdef OutlineWithLines
+   glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT);
+   glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   glLineWidth(2.5);
+   glEnable(GL_LINE_STIPPLE); glLineStipple(5, 0x5555);
+   glBindTexture(GL_TEXTURE_2D, GL_NONE); // no texture
+   glBegin(GL_LINE_STRIP); // using lines for now
+#endif //OutlineWithLines
+
+   for (int c=0; c < solutionRouteLen; c++) {
+// assuming #ifdef OutlineWithLines
+      glVertex3f((solutionRoute[c].x + 0.5) * maze.cellSize,
+         (solutionRoute[c].y + 0.5) * maze.cellSize,
+         (solutionRoute[c].z + 0.5) * maze.cellSize);
+//#else
+//      // quadric, base, top, height, slices, stacks
+//      glPushMatrix();
+//      glTranslatef(i * maze.cellSize, j * maze.cellSize, k * maze.cellSize);
+//      gluCylinder(quadric, edgeRadius, edgeRadius, maze.cellSize, 4, 1);
+//      glPopMatrix();
+//#endif // OutlineWithLines
+   }
+#ifdef OutlineWithLines
+   glEnd(); // GL_LINES
+   glPopAttrib();   
+#endif //OutlineWithLines
+}
+
+
+// Figure out the solution route. Use dead-end filler algorithm (http://www.astrolog.org/labyrnth/algrithm.htm).
+// We assume that the maze is "perfect" (no loops).
+void Maze3D::computeSolution(void) {
+   // Initialize the isOnSolutionRoute member of each passage cell to 'true'.
+   // We will then eliminate cells on dead-end passages until only the cells
+   // really on the solution route are left.
+   solutionRouteLen = 0;
+   for (int i=0; i < w; i++)
+      for (int j=0; j < h; j++)
+         for (int k=0; k < d; k++)
+            if (cells[i][j][k].state == Cell::passage) {
+               cells[i][j][k].isOnSolutionRoute = true;
+               solutionRouteLen++;
+            }
+
+   // debugMsg("solutionRouteLen (num of passage cells): %d\n", solutionRouteLen);
+
+   bool somethingChanged;
+   do {
+      somethingChanged = false;
+      // Loop through and find dead ends, and fill them (set isOnSolutionRoute = false) up to the next junction
+      for (int i=0; i < w; i++)
+         for (int j=0; j < h; j++)
+            for (int k=0; k < d; k++) {
+               int deadEndLen = fillInDeadEnd(i, j, k, NULL);
+               if (deadEndLen > 0) {
+                  // debugMsg("Found dead end of length %d at <%d, %d, %d>\n", deadEndLen, i, j, k);
+                  solutionRouteLen -= deadEndLen;
+                  somethingChanged = true;
+               }
+            }
+   } while (somethingChanged);
+
+   if (solutionRoute) delete [] solutionRoute;
+   solutionRoute = new CellCoord[solutionRouteLen];
+
+   // Fill in the remaining solution, placing each cell into solutionRoute in turn.
+   int n = fillInDeadEnd(ccEntrance.x, ccEntrance.y, ccEntrance.z, solutionRoute);
+   if (n != solutionRouteLen)
+      errorMsg("n (%d) != solutionRouteLen (%d)\n", n, solutionRouteLen);
+
+   return;
+}
+
+// If (x, y, z) is a dead end, fill it in (setting isOnSolutionRoute = false) and
+// continue up the passage to the next junction.
+// If route is null, don't fill in the entrance or exit cell.
+// If route is non-null, store filled cells there in sequence.
+// Return number of cells filled; this is zero if cell is not a dead end.
+int Maze3D::fillInDeadEnd(int x, int y, int z, CellCoord *route) {
+   // number of cells filled
+   int c = 0;
+   CellCoord ccCurr(x, y, z), ccNext;
+
+   // debugMsg("fillInDeadEnd(%d, %d, %d): ", x, y, z);
+   // if (route) debugMsg("(solution route): ");
+
+   // Find out whether the current cell is passage and
+   // has at most one neighbor that is passage and has isOnSolutionRoute = true.
+   // (Don't fill in the entrance or exit cell, unless route pointer is non-null.)
+   while (ccCurr.isCellPassage() && cells[ccCurr.x][ccCurr.y][ccCurr.z].isOnSolutionRoute
+          && (route || !(ccCurr == ccEntrance || ccCurr == ccExit))
+          && ccCurr.getSoleOpenNeighbor(ccNext)) {
+      // If so, record current cell in route (if route record is requested)
+      if (route) {
+         route[c] = ccCurr;
+      }
+      // debugMsg("<%d, %d, %d> ", ccCurr.x, ccCurr.y, ccCurr.z);
+      c++;
+      // and fill in the current cell.
+      cells[ccCurr.x][ccCurr.y][ccCurr.z].isOnSolutionRoute = false;
+
+      // Then proceed to the neighbor.
+      if (!ccNext.isInBounds()) break; // zero neighbors (as in case of exit), so nowhere to continue to
+      else ccCurr = ccNext;
+   }
+
+   // debugMsg("\n");
+
+   return c;
 }

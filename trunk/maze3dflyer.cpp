@@ -84,7 +84,7 @@ bool	mouseGrab = true;		// mouse centering is on?
 bool	showFPS = false, showScores = false, showStatus = true; // whether to display framerate or score list
 bool	showHelp = true;		// show help text
 bool    autoForward = false;    // keep moving forward without holding down 'w'
-bool    drawOutline = true;
+bool    drawOutline = true, drawSolutionRoute = false;
 bool    highSpeed = false;      // high-speed mode
 bool    flipTextures = false;   // exchange sky and maze textures
 
@@ -136,6 +136,7 @@ Home/End: jump to maze entrance/exit\n\
 N: new maze\n\
 M or left-click: toggle mouse grab\n\
 Shift: toggle high speed\n\
+R: toggle display of route to exit\n\
 T: toggle frames-per-second display\n\
 L: toggle display of best score list (arrow shows current maze config)\n\
 U: toggle status bar display\n\
@@ -449,10 +450,12 @@ void initCellsWalls(bool initVertices = true) {
 void newMaze() {
    initCellsWalls(false);
    generateMaze();
+   maze.computeSolution();
 }
 
 void nextLevel() {
    level++;
+   autoForward = false;
    maze.incrementDims(level);
    SetupWorld();
 }
@@ -996,6 +999,7 @@ char *statusText(void) {
       mouseGrab ? " [M]" : "",
       highSpeed ? " [H]" : "",
       drawOutline ? " [G]" : "",
+      drawSolutionRoute ? " [R]" : "",
       autopilotMode ? " [P]" : "",
       developerMode ? " [D]" : "",
       maze.checkCollisions ? "" : " [C]" // hide from beginners
@@ -1434,6 +1438,7 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
    glEnd();
 
    if (drawOutline) maze.drawOutline();
+   if (drawSolutionRoute) maze.drawSolutionRoute();
 
    // display entrance/exit (may mess up rot/transf matrix)
    maze.ccEntrance.drawExit(maze.entranceWall, true);
@@ -1954,6 +1959,9 @@ bool CheckKeys(void) {
 
         // 'G' key: toggle outline (edge) drawing
         checkKey('G', (drawOutline = !drawOutline));
+
+        // 'R' key: toggle solution route display
+        checkKey('R', (drawSolutionRoute = !drawSolutionRoute));
 
 	// 'l' key: toggle score list display
         checkKey('L', (showScores = !showScores) ? createTextDLs(scoreListDL, false, highScoreList.toString(maze, yRes / 24 - 3)) : 0);
