@@ -1,11 +1,21 @@
+Ideas and to-do's
+
+('-' indicates not done; 'x' indicates done; '*' indicates important or urgent or extra cool/useful)
+
  * To do:
+ x display solution (e.g. as white line from entrance to exit, from center of each cube to the next)
+   Having solution will help with implementation of auto-pilot.
+   x compute and store solution as sequence of cells
+   x draw solution
+   x add key to toggle display of solution.
  - maybe have an "outside" view that lets you look at the maze from the outside, while you're inside?
    Like Tab in Morrowind. Useful for big mazes.
    Could implement as:
      - save your current position / orientation ('mark') (don't save velocity)
      - teleport you to outside maze
      - show your saved position as some kind of glowing orb with glowing spines sticking out that penetrate maze walls. Should indicate orientation as well as location.
-     - let you zoom around but not into maze; maybe just rotate around at a fixed radius from center of maze
+     - let you zoom around but not into maze; maybe just rotate around at a fixed radius from center of maze.
+       - WASD rotates you around sphere as if rotating the maze
      - exit mode by teleporting back to your saved position / orientation
  *x key, such as 'q', to toggle auto-forward mode. When this is on, it's like holding the 'w' key down.
    Like in Morrowind. This is canceled by pressing 'w', 's', or stop (space?)

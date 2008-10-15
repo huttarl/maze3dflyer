@@ -89,6 +89,20 @@ public:
 	/* Randomly shuffle the order of CellCoords in an array.
 	 * Ref: http://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm */
 	static void shuffleCCs(CellCoord *ccs, int n);
+
+        // Find out whether this cell has only one "open" neighbor (i.e. that is passage and has isOnSolutionRoute = true).
+        // If so, populate position of neighbor and return true.
+        bool getSoleOpenNeighbor(CellCoord &neighbor);
+
+        // Return true if this cc's coords are inside the maze bounds.
+        bool isInBounds(void);
+
+private:
+        // Check whether neighbor cell at this + (dx, dy, dz) is open
+        // (i.e. that is passage and has isOnSolutionRoute = true).
+        // If so, put neighbor cell's coords into neighbor and return true.
+        bool checkNeighborOpen(int dx, int dy, int dz, CellCoord &neighbor);
+
 };
 
 extern CellCoord ccExit, ccEntrance;

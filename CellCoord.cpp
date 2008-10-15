@@ -231,4 +231,38 @@ void CellCoord::shuffleCCs(CellCoord *ccs, int n) {
 	}
 }
 
+// Find out whether this cell has at most one "open" neighbor (i.e. that is passage and has isOnSolutionRoute = true).
+// If so, populate position of neighbor and return true.
+bool CellCoord::getSoleOpenNeighbor(CellCoord &neighbor) {
+   int n = 0; // number of "open" neighbors
+   if (checkNeighborOpen( 1, 0, 0, neighbor)) n++;
+   if (checkNeighborOpen(-1, 0, 0, neighbor)) n++;
+   if (n < 2 && checkNeighborOpen(0,  1, 0, neighbor)) n++;
+   if (n < 2 && checkNeighborOpen(0, -1, 0, neighbor)) n++;
+   if (n < 2 && checkNeighborOpen(0, 0,  1, neighbor)) n++;
+   if (n < 2 && checkNeighborOpen(0, 0, -1, neighbor)) n++;
+
+   // If there are no neighbors, populate "neighbor" with invalid coords.
+   if (n == 0) neighbor.x = -1;
+   return (n <= 1);
+}
+
+// Check whether neighbor cell at this + (dx, dy, dz) is open
+// (i.e. that is passage and has isOnSolutionRoute = true).
+// If so, put neighbor cell's coords into neighbor and return true.
+bool CellCoord::checkNeighborOpen(int dx, int dy, int dz, CellCoord &neighbor)
+{
+   CellCoord ccTmp(x + dx, y + dy, z + dz);
+   if (ccTmp.isInBounds() && ccTmp.isCellPassage() && maze.cells[ccTmp.x][ccTmp.y][ccTmp.z].isOnSolutionRoute) {
+      neighbor = ccTmp;
+      return true;
+   }
+   else return false;
+}
+
+// Return true if this cc's coords are inside the maze bounds.
+bool CellCoord::isInBounds(void) {
+   return (x >= 0 && x < maze.w && y >= 0 && y < maze.h && z >= 0 && z < maze.d);
+}
+
 extern CellCoord ccExit, ccEntrance;

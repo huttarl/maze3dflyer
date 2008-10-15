@@ -37,6 +37,7 @@ public:
    /* The maze consists of both cells and walls. Each wall may be shared by two cells. */
    Cell (*cells)[hMax][dMax];		// The maze's cells
    CellCoord ccExit, ccEntrance;
+   CellCoord *solutionRoute; // record of computed solution route
    /* C++ doesn't support dynamic multidimensional arrays very well, hence the following cruft. */
    // The maze's walls
    Wall (*xWalls)[Maze3D::hMax][Maze3D::dMax];    // Walls facing along X axis   [w+1][h][d]
@@ -63,6 +64,13 @@ public:
    void drawYEdge(int i, int j, int k);
    void drawZEdge(int i, int j, int k);
    void drawOutline(void);
+   void drawSolutionRoute(void);
+
+   int solutionRouteLen;
+   void computeSolution(void);
+
+private:
+   int fillInDeadEnd(int x, int y, int z, CellCoord *route);
 };
 
 extern Maze3D maze;
