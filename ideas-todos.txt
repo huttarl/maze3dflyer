@@ -64,7 +64,7 @@ Ideas and to-do's
    esp. those that aren't otherwise visible.
    For now, prob just letters or words. Later, icons for booleans?
    Also show wxdxh/s, and num of passage cells. (Maybe time to beat?)
- **x have a slower speed setting for when you're navigating the maze. E.g. CTRL to toggle speeds.
+ **x have a slower speed setting for when you're navigating the maze. E.g. SHIFT to toggle speeds.
    This would affect keyAccel? no, MaxVelocity.
  - In 2.0... have a more urgent mode (maybe just one of multiple modes) where you have no choice
    but to find you way out of the maze. (And you have more tools to do it, like breadcrumbs.)
@@ -141,7 +141,7 @@ Ideas and to-do's
      x if just outside exit and state == entered, then finished
      x if just outside entrance or exit, state := exited
    x how to know if player backed out??
- - clean up code, including "borrowed" code
+ x clean up code, including "borrowed" code
    x maybe factor some out, e.g. maze gen, display, each class into a .h
      x most of this is done.
    ##x make sure all code is properly attributed.
