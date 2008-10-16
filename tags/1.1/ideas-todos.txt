@@ -1,0 +1,302 @@
+Ideas and to-do's
+
+('-' indicates not done; 'x' indicates done; '*' indicates important or urgent or extra cool/useful)
+
+ * To do:
+ x display solution (e.g. as white line from entrance to exit, from center of each cube to the next)
+   Having solution will help with implementation of auto-pilot.
+   x compute and store solution as sequence of cells
+   x draw solution
+   x add key to toggle display of solution.
+ - maybe have an "outside" view that lets you look at the maze from the outside, while you're inside?
+   Like Tab in Morrowind. Useful for big mazes.
+   Could implement as:
+     - save your current position / orientation ('mark') (don't save velocity)
+     - teleport you to outside maze
+     - show your saved position as some kind of glowing orb with glowing spines sticking out that penetrate maze walls. Should indicate orientation as well as location.
+     - let you zoom around but not into maze; maybe just rotate around at a fixed radius from center of maze.
+       - WASD rotates you around sphere as if rotating the maze
+     - exit mode by teleporting back to your saved position / orientation
+ *x key, such as 'q', to toggle auto-forward mode. When this is on, it's like holding the 'w' key down.
+   Like in Morrowind. This is canceled by pressing 'w', 's', or stop (space?)
+ - detect when we're going to overflow max maze size.
+ x fix random # function for sparsity - goes too high too often
+ x better texture than rock: not so glaringly repeating
+ x- need to do something about score list that scrolls off bottom of screen.
+   Center it around current maze dim?
+   - could do sthg better when doing a never-before dim
+ x add a key (maybe F7) to toggle "developer" mode and enable certain commands, such as:
+ x add a key (e.g. '+') to 'solve' the current level and advance to the next one.
+   x could do it by jumping to just inside the exit, with the right state enabled; or just do it.
+ xq* fix bug where score doesn't get recognized; maybe because dims are in different order from in score list.
+ xq may need to change key for toggling help display; keycode for '/' may not apply to non-US keyboards.
+ x fade to white at end of level, fade in from white at beginning.
+   - could do texture-loading while faded out!
+ - for fun: have a flipped texture mode, where the skybox goes on the maze, and the wall textures go on the skybox!
+   - for that we may need to mipmap the sky textures after all.
+   - and more importantly, we might have to differentiate between north and south walls, and btwn east and west walls, as I don't think we do now.
+ - might be fun to have bits of animation in the skybox... e.g. twinkling stars (careful to be in the sky!)
+   or shooting stars... a flying bird if not too hard...
+ - could make maxvel increase as we get further from the maze.
+   Going slowly while cruising around empty air is no fun.
+ x change initial view to get a more overall perspective?
+   x user can always hit Home to go to entrance.
+ x** get jpg loading to work - will greatly reduce download size.
+   X this works (with SOIL) but is slow; possibly due to Y inversion? No, that doesn't seem to make
+     much speed difference. Maybe it's the jpg decompression? could do profiling.
+     Could try using the official library instead of stb's...
+     No, actually the speed is the same regardless of whether we're loading jpgs or bmps. So leave the library alone!
+     I mitigated this with a splash screen before texture loading.
+ x* finish splash screen
+   - could add a load progress indicator to splash screen, since the delay is in over
+     a dozen segments, each of which is ~1/4 sec. This would let users know they're not just waiting
+     b/c I wanted to make them wait. I currently have static "Loading..." msg, which is probably good enough
+     for 4 seconds.
+ - might be fun, when you pass out the exit, to have the camera automatically turn to face the maze (center)
+   and fly away, letting maze recede in view (or more of maze come into view)
+   The complication here is avoiding collisions with maze parts. But if we face the very center of the maze, not
+   the exit, we're unlikely to hit maze parts.
+
+   
+ x test flash when new time - text centered right?
+ xq* turn off mouse pointer when mouse grabbing
+ x make a status bar ... maybe a rectangle in lower middle, which shows status of toggles
+   esp. those that aren't otherwise visible.
+   For now, prob just letters or words. Later, icons for booleans?
+   Also show wxdxh/s, and num of passage cells. (Maybe time to beat?)
+ **x have a slower speed setting for when you're navigating the maze. E.g. SHIFT to toggle speeds.
+   This would affect keyAccel? no, MaxVelocity.
+ - In 2.0... have a more urgent mode (maybe just one of multiple modes) where you have no choice
+   but to find you way out of the maze. (And you have more tools to do it, like breadcrumbs.)
+   Currently, there's no pressure... you can always back out or even teleport out, and there's
+   no pressure to even go in.
+ - game mode: increasing levels. As you finish one maze, you advance to the next level, with a slightly
+   "bigger" maze. Where bigger ~= # of passage cells, approx w*h*d/(s*s*s)?
+    - //TODO: gather stats on average # of passage cells in each configuration, so we can establish advancement pattern
+    - your score is your cumulative time ... divided by par?
+      - so you'd keep separate scores for game mode than for single-maze mode
+    - bread crumbs is an ability you gain after a certain level
+    - maybe other "powerups"?
+    - change skybox at each level or each few levels
+      - requires proper jpg loading
+ *x add better effect when you solve maze, e.g. flash screen
+ *x display high scores (for each w/h/d/s combo?) 
+     x data structure - dictionary? (w/h/d/s -> min time)
+	 x save high scores to file
+	 x load high scores
+	 x* test that it does
+	   x not save for new times that are larger than old time for same dims
+	   x save for new times that are smaller, for same dims
+	   x save for new times for new dims
+     x* display high score list
+       x middle of window
+       x semiopaque background rect?
+       - scroll when too many to fit on screen?
+     x* notify player when new HS
+     - maybe record player username with best score? opens up portability issues...
+ -* would be fun to be able to "drop bread crumbs" ... leave markers in the maze to remind you where you've tried.
+   - maybe 2 colors - red and green? - two keys (1 and 2?)
+   - drop at current location precisely, not just center of cell. Well actually just in front of current loc, so you can see it.
+   - maybe shape as tetrahedrons (rotating), glowing?, pulsating
+   - resetting timer must remove breadcrumbs
+   - a bad guy comes behind you (on higher levels) after a while and eats your bread crumbs!
+     - if he touches you, you teleport? back to the entrance?
+ x 'n' command to create new maze with current parameters.
+ - maybe add a "rear view mirror"?
+ x big complex mazes will be more "legible" if there is a solid dark line along all outer edges
+   x maybe a grid, so there are lines even between cells? but not in open space
+   x how to draw so that it's visible, regardless of adjacent walls? make a 4-sided "diamond"-cross-section square prism around the line?
+     (with width = epsilon) Such a line would also be visible inside the maze.
+     - or this: iterate through edge segments;
+       - if current segment is external-convex edge, draw external 3 sides of square prism;
+       - if current segment is external-concave edge, draw external 1 side of square prism;
+       - otherwise, draw nothing (e.g. if current segment borders no walls, or two coplanar walls, or 4 walls)
+       - for this purpose, exit/entrance facade counts as a wall?
+   x it could be created once as a display list, since the maze never changes.
+   x right now just doing it as lines (not quads)
+   x Lines on concave corners appear only sometimes.
+     Could try a higher line thickness to see if that helps, but don't want them too heavy.
+     Tried it; this doesn't help the concave corners, but it introduces inelegant joints
+     (no line caps / mitres provided). Forget thick lines.
+   x I enabled GL_LINE_SMOOTHING but it didn't seem to work. Ah, had to set blending. works now.
+ - ?display directional hint while you're solving maze:
+   - red arrow: direction to exit (crow-flies)
+   - green: dir to entrance
+ - fix bug that lets you go thru walls when approaching a convex corner.
+ x* need to modify score (time) to be non-integral. Typical solve times are in single digits!
+ x wall thickness: it looks dumb that the walls are paper-thin.
+   x could fake it by putting a cap on the entrance and exit, since that's the only place you can see wall thickness.
+     Put on a double wall, with a little thickness, whose front (outside) is on the plane where the logical wall is,
+     with a portal in the middle. The portal could actually occupy most of the wall, with a narrow frame around the outside.
+     - would be fun to make the hole round instead of square.
+ *x release! use google code project hosting? what license? Artistic
+   svn URL: https://maze3dflyer.googlecode.com/svn/trunk
+   #x eliminate unnecessary files
+   *x structure?
+   *x move code to maze3dflyer and commit.
+   *x notify nehedev@gmail.com - they indicated a desire to post it on nehe.
+ x add code to set goal of navigating from entrance to exit, and time player
+   x detect "entered" / "exited" state
+     x if just inside entrance, then state := "entered".
+     x if just outside exit and state == entered, then finished
+     x if just outside entrance or exit, state := exited
+   x how to know if player backed out??
+ x clean up code, including "borrowed" code
+   x maybe factor some out, e.g. maze gen, display, each class into a .h
+     x most of this is done.
+   ##x make sure all code is properly attributed.
+     Should be limited to those at the top of Maze3DSSaver.cpp
+   x I'm not really using jpeg.cpp / jpeg.h, except that jpeg.h has #pragma comment(lib, "lib/jpeg.lib")
+     lib/jpeg.lib seems to be used only for LoadBMP(). I should either
+      - factor out LoadBMP (I believe the code is available on Nehe?) and get rid of jpeg.{cpp,h,lib}, or
+      ##*- actually use jpeg.lib and have jpg textures instead of BMP. jgp textures would be under 1/10th the size of BMP!
+      OK, this is done, but the result is stripey textures on 3 out of 4.
+      Maybe I need a different jpeg loader? e.g. maybe http://members.iinet.net.au/~cleathley/openGL/TextureLoader.htm
+      but that's for Windows only, and supports jpg/bmp/gif/tga but not png
+      Is there a cross-platform one?
+      Anyway, for now I put the bmp-loading code back, with jpg loading as an ifdef,
+      until I can get it fixed.
+ x ease of use: display help text ('?' to toggle; on by default)
+	(turns off fps? no)
+	x# need to make display list for shadowed text
+ -# port to Linux
+   - use a GLUT main loop. See http://www.lighthouse3d.com/opengl/glut/index.php?5
+ x fix ico/bmp: it doesn't make sense (walls / empty areas don't line up)
+ - nicer display:
+   - antialiasing 
+     - hard? polygon AA requires depth sorting. Or does it? The main jaggies are polygon-against-background.
+		polygon-against-polygon jaggies are not very visible. So I could skip depth sorting maybe. *qx Try it.
+		Nope, didn't really work... everything goes to mush (implemented it as an aspect of 'blend', so press 'b' to try).
+		  Maybe I'm setting alpha where I don't mean to be? I can't find it though...
+		- should probably remove the 'blend' option since it's not something I put in by design nor is it useful.
+		(If I do depth-sorting, it has to be redone when we move :-p.)
+		If I want to get this done, I will probably have to study up and actually understand the concepts, e.g. blend functions.
+	 - FSAA would be easier but requires more memory; still an option.
+     - could fudge it by drawing slightly-thick translucent polylines along edges of quads...
+	 - see http://glprogramming.com/red/chapter06.html
+   - fog
+   - lighting (shadow) (lightmapping?) bump mapping?
+   x* skybox / sky sphere (http://gpwiki.org/index.php/Sky_Box, http://www.mindcontrol.org/~hplus/graphics/skybox.html,
+	   http://www.morrowland.com/apron/tutorials/gl/gl_skybox.zip
+	   - allow switching skybox: e.g. use day/clouds, night/stars, mountains/lake, etc.
+	   - can we use scenery from Stellarium? Stellarium "old-style" landscapes have a ground image and multiple side images; no top.
+		garching has 4 sides (good test case); guereins, oceans, and hurricane have more.
+		Each side image apparently has alpha pixels through which to show sky, which makes things more complex.
+		An initial test case could be made by just using OpenGL background color as the sky-behind-the-skybox.
+		Would be cool to just take the path to the Stellarium landscapes folder as a parameter, parse ini files, and pick/use
+		those landscapes directly. What to use for sky then? maybe use a separate black or blue-with-cloud image.
+   - textures:
+	 x distinct ceiling vs. floor texture
+		x load ceiling texture
+		x set outsidePositive (done but buggy?)
+		x use outsidePositive to determine texture
+     - higher-res ceiling texture
+	 - ?make them bigger and extend over multiple cubes (requires matching them up?)
+	 x rock: need smaller scale, higher res
+	 x brick: need more variation among bricks
+	 - I lowered the contrast because they were glaring, but now they look washed-out.
+   xq have entrance/exit discs rotate with system time
+     xq and be textureless
+ x* A consequence of the whole sparsity thing is having to place the entrance and exit more intelligently.
+ xq# update documentation for keys
+ - port to Linux (http://csf11.acs.uwosh.edu/cs371/visualstudio/)
+ x add 'c' to toggle collision checking
+ - performance:
+   x display FPS (toggleable) (requires better screen printing capability - maybe http://www.lighthouse3d.com/opengl/glut/index.php?bmpfontortho)
+     or http://blog.yukonho.com/article.php?id=4884 (uses glutStrokeCharacter)
+     or http://www.opengl.org/resources/features/fontsurvey/#glut
+   - do profiling/timing of maze generation, showing effect of varying
+     - sparsity (expect O(n*n))
+	 - maze size (w,d,h) (expect O(w*d*h))
+	 - it would probably be faster to check for sparsity collisions by iterating through a list of non-passage
+		cells in the maze, rather than through the whole hemicube of cells within sparsity range.
+		- could even do an octree thing to speed up. Doesn't seem to be a performance problem yet, but I haven't tried
+		 really big mazes.
+   - profile the app in general, finding performance/rendering bottlenecks
+   - investigate OpenGL optimizations, like
+     - display lists for like-textured quads
+     - Vertex Arrays / Vertex Buffer Objects (http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=45)
+	 - culling (all our faces are currently double-facing, so we can't cull bwd-facing polygons... do we need/want to change that?)
+	   maybe cull hidden polygons... that's complicated.
+
+ * better moving around:
+   x arrow keys for turning
+   - maybe a bonk sound on collision. :-) (tactile feedback... otherwise it's not very obvious)
+   - need a stop key? (not so much, with speed decay.) let space do double duty?
+   x* WASD keys for moving (fwd/bwd/strafe)
+   x maybe a key to release mouse-grab
+     x maybe also click toggles this
+   - enhancement: PgUp / PgDn for strafe up/down (maybe not needed)
+   x see http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=Quaternion_Camera_Class for the math
+     - maybe add my sideways-motion feature to their lesson sample as an enhancement
+     x implement maxPitch
+   - in addition to the continuous controls we have now, it would be nice to
+     have discrete ones:
+	 - move fwd/bwd/sideways one cell
+	 - rotate 90 degrees
+	 x go to maze entrance (Home)
+	   xq used to work; adjust for new entrance location
+	 x snap to maze grid (position and orientation)
+	   - animate by steps, not just snap
+   - smooth turning accel/decel - not so critical with mouse steering.
+   x forward accel/decel
+     x we have some of this now.
+   - it would be nice sometimes to have slower movement, e.g. with shift.
+   * autopilot, following maze
+     *- make move queue keep track of expected position (cellcoord)
+     - requires solver
+     - don't decel/accel between consecutive forward autopilot moves
+     - enhancement: back out of short dead-ends, instead of doing 180
+   x maybe try ArcBall rotation with mouse?: http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=48
+	 x no... right now we're using the quaternion class's mouse control, which is good
+*x (optionally?) draw walls with spaces in between.
+    Is this more easily implemented as a display option, or as a maze-gen change?
+	I think as a maze-gen change.
+	I've been doing this as merely an automatic physical expansion of the same old logical maze;
+	but maybe what I really want is a sparse-but-random maze. That is, a maze where endpoints and
+	joints can be in any physical cell, but passage cells can't be adjacent unless they have to.
+	I think this means they can't be adjacent unless they're already directly open to e.o.
+	If a cell becomes unpassable (because adjacent to a passage cell that it's not inherently connected to),
+	it is marked as such (forbidden). Floodfill continues until every cell in the queue consumed;
+	cells that are already passage or forbidden don't get (re-)added to the queue.
+	(It is possible for some cells to become unreachable, so they remain neither forbidden nor passage.)
+	In that case, do we need sparsity as a scalar, or just a boolean? Is there any call for making
+	sure parts of the maze stay 3 or 4 cells away from e.o.? It might be nice, but... the checking
+	gets more complicated. I would like to avoid diagonally adjacent tunnels, since they obscure
+	the view. This makes things more complicated too. Use manhattan distance?
+	The complication is that each cell needs to be updated not just for its distance from passage cells,
+	but for *which* cells it's what distance from. That's because you can burrow from cell A in a straight
+	line into cell B when cells A and B are too close, but not when cells B and C (another passage cell)
+	are too close, *unless* C is part of the "same corridor" as A, which means...??
+	I think the right answer is, two passage cells A and B cannot be within manhattan-distance k of each other
+	unless they are directly connected, i.e. connected by a passage of manhattan length k (which is the minimal
+	possible length). Note that "directly connected" (denote as {-} ) is not transitive. A {-} B and B {-} C
+	does not imply A {-} C.
+	Since we're using a "growing" algorithm, we know that all existing passage cells are already connected to e.o.
+	So we don't need to worry about justifying closeness between B and C by creating a new passage between B and C,
+	because that would create a loop.
+	How to implement this?
+	One way would be to keep, for each cell, a list/array of other cells to which it is directly connected (or would
+	be if it were carved?) that are within hd <= k.
+    Yikes.
+	The point is, when we're considering whether to grow from cell A into cell B, to determine whether cell B
+	would be too close to any other cell C, to which B would not be minimally connected via A.
+	This should only happen with cells that (1) A is not minimally connected to, or that (2) B is closer to than A is.
+	And I believe we can ignore (1) because the important parts of it are contained in (2).
+	So we just need to consider the "step pyramid" of cells based on B and pointing away from A.
+	If any of them are carved, B is invalid. True? <== ***
+	
+	I believe so. I've implemented this algorithm, and it seems to work well (but is not rigorously verified).
+	I modified the sparseness constraint to say B and C must be at least sparseness *Euclidean* distance apart,
+	not manhattan distance, to avoid direct diagonal adjacency.
+ - a command to show the maze solution (route from entrance to exit), e.g. as a red line (cylinder)
+ - put some objects into the maze, for interest?
+   - maybe dynamic, framed pictures on the walls, fetched from internet (google image search?) or from a folder,
+     changed periodically while playing
+ *x use floor/wall/ceiling textures
+   x I'm loading carpet and brick; why isn't it showing brick? probably because of begin/end
+ x maybe avoid colliding with walls; see Fich demo for that.
+ x make w/d/h dynamic instead of const; or at least, specifiable at start
+	x Well, I couldn't do it fully dynamically, so now they all have a max of 10.
+	- But the max isn't enforced yet! use assert
+	
