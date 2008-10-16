@@ -15,6 +15,7 @@ Please add your comments indicating which of the following (or other) features y
   * More puzzle-solving-oriented features, e.g. a 3rd-person view to aid in solving the maze
   * More details in the maze, e.g. pictures on the walls
   * Variety of skyboxes
+  * Dialog-based control of settings, such as maze dimensions and sparseness
 
 == Minor features ==
   * Add scrolling for long best-score list
