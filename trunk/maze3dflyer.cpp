@@ -492,7 +492,7 @@ void SetupWorld()
    // debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
 
    // Now set up our max values for the camera
-   Cam.m_MaxVelocity = maze.wallMargin * 0.5f; //TODO: make this changeable by keyboard
+   Cam.m_MaxVelocity = maze.wallMargin * 0.2f; //TODO: make this changeable by keyboard
    Cam.m_MaxAccel = Cam.m_MaxVelocity * 0.5f;
    Cam.m_MaxPitchRate = 3.0f;
    Cam.m_MaxPitch = 89.9f;
@@ -1943,9 +1943,9 @@ bool CheckKeys(void) {
         checkKey('C', (developerMode && (maze.checkCollisions = !maze.checkCollisions)));
 
         checkKey(VK_SHIFT, ((highSpeed = !highSpeed), \
-                (Cam.m_MaxVelocity = maze.wallMargin * (highSpeed ? 1.0 : 0.5)), \
-                (Cam.m_MaxPitchRate = (highSpeed ? 5.0 : 3.0)), \
-                (Cam.m_MaxHeadingRate = (highSpeed ? 5.0 : 3.0))));
+                (Cam.m_MaxVelocity = maze.wallMargin * (highSpeed ? 1.0 : 0.2)), \
+                (Cam.m_MaxPitchRate = (highSpeed ? 5.0 : 2.0)), \
+                (Cam.m_MaxHeadingRate = (highSpeed ? 5.0 : 2.0))));
 
 	// 'H' key: toggle help display
 	// Was '/?', but that's VK_OEM_2, which may not be portable.
