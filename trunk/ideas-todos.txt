@@ -2,11 +2,12 @@ Ideas and to-do's
 
 ('-' indicates not done; 'x' indicates done; '*' indicates important or urgent or extra cool/useful)
 
- * To do:
  x display solution (e.g. as white line from entrance to exit, from center of each cube to the next)
    Having solution will help with implementation of auto-pilot.
    x compute and store solution as sequence of cells
    x draw solution
+	x change stipple pattern to asymmetric (e.g. increasing dash length) so you can know which way the exit is,
+		if lost inside the maze.
    x add key to toggle display of solution.
  - maybe have an "outside" view that lets you look at the maze from the outside, while you're inside?
    Like Tab in Morrowind. Useful for big mazes.

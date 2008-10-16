@@ -208,7 +208,10 @@ void Maze3D::drawSolutionRoute(void) {
    glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT);
    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    glLineWidth(2.5);
-   glEnable(GL_LINE_STIPPLE); glLineStipple(5, 0x5555);
+   glEnable(GL_LINE_STIPPLE);
+   // stipple pattern is increasing length of dashes toward exit: (space) 1 2 3 4; binary 0010110111011110
+   // reverse that (opengl quirk) and add commas: 0111,1011,1011,0100. Hex: 0x7bb4
+   glLineStipple(10, 0x7bb4);
    glBindTexture(GL_TEXTURE_2D, GL_NONE); // no texture
    glBegin(GL_LINE_STRIP); // using lines for now
 #endif //OutlineWithLines
