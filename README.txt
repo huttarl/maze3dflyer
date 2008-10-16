@@ -33,6 +33,7 @@ Home/End: go to maze entrance/exit
 Shift: toggle higher speed
 M or mouse-click: toggle mouse grab*
 R: toggle display of solution (disables recording new best scores)
+  Length of dashes increases toward exit.
 T: toggle display of framerate
 L: toggle display of best score list (arrow shows current maze config)
 U: toggle status bar display
