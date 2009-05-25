@@ -92,6 +92,7 @@ bool    flipTextures = false;   // exchange sky and maze textures
 float	keyTurnRate = 2.0f; // how fast to turn in response to keys
 float	keyAccelRate = 0.1f; // how fast to accelerate in response to keys
 float	keyMoveRate = 0.1f;  // how fast to move in response to keys
+float   mouseTurnRate = 0.05f; // how fast to turn in response to mouse; default 0.2f
 
 // Used for mouse steering
 UINT	MouseX, MouseY;		// Coordinates for the mouse
@@ -2050,27 +2051,27 @@ void CheckMouse(void)
 	{
 		DeltaMouse = GLfloat(CenterX - MouseX);
 
-		Cam.ChangeHeading(-0.2f * DeltaMouse);
+		Cam.ChangeHeading(-mouseTurnRate * DeltaMouse);
 		
 	}
 	else if(MouseX > CenterX)
 	{
 		DeltaMouse = GLfloat(MouseX - CenterX);
 
-		Cam.ChangeHeading(0.2f * DeltaMouse);
+		Cam.ChangeHeading(mouseTurnRate * DeltaMouse);
 	}
 
 	if(MouseY < CenterY)
 	{
 		DeltaMouse = GLfloat(CenterY - MouseY);
 
-		Cam.ChangePitch(-0.2f * DeltaMouse);
+		Cam.ChangePitch(-mouseTurnRate * DeltaMouse);
 	}
 	else if(MouseY > CenterY)
 	{
 		DeltaMouse = GLfloat(MouseY - CenterY);
 
-		Cam.ChangePitch(0.2f * DeltaMouse);
+		Cam.ChangePitch(mouseTurnRate * DeltaMouse);
 	}
 
 	MouseX = CenterX;
