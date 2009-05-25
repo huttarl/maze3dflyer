@@ -34,6 +34,7 @@ public:
    static float exitHoleRadius;
    static float exitThickness;
    static float edgeRadius;
+   static float routeRadius;
    /* The maze consists of both cells and walls. Each wall may be shared by two cells. */
    Cell (*cells)[hMax][dMax];		// The maze's cells
    CellCoord ccExit, ccEntrance;
@@ -65,6 +66,7 @@ public:
    void drawZEdge(int i, int j, int k);
    void drawOutline(void);
    void drawSolutionRoute(void);
+   void drawCylinder(int x1, int y1, int z1, int x2, int y2, int z2);
 
    int solutionRouteLen;
    void computeSolution(void);

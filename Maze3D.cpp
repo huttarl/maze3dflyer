@@ -7,6 +7,10 @@
 // (square prisms). At far range they look like dotted lines.
 // #define OutlineWithCylinders 1
 
+// Two different ways to draw route. Define exactly one.
+// #define RouteWithLines 1
+#define RouteWithCylinders 1
+
 // size of one cell in world coordinates. Some code may depend on cellSize = 1.0
 const float Maze3D::cellSize = 1.0f;
 // margin around walls that we can't collide with; should be << cellSize.
@@ -19,6 +23,7 @@ bool Maze3D::checkCollisions = true;
 clock_t Maze3D::whenEntered = (clock_t)0, Maze3D::whenSolved = (clock_t)0, Maze3D::lastSolvedTime = (clock_t)0;
 bool Maze3D::hasFoundExit = false, Maze3D::newBest = false;
 float Maze3D::edgeRadius = 0.006 * cellSize;
+float Maze3D::routeRadius = 0.01 * cellSize;
 
 Maze3D::Maze3D(int _w, int _h, int _d, int _s, int _b) {
    w = _w, h = _h, d = _d;
@@ -157,9 +162,9 @@ void Maze3D::drawZEdge(int i, int j, int k) {
       glVertex3f(i * maze.cellSize, j * maze.cellSize, k * maze.cellSize);
       glVertex3f(i * maze.cellSize, j * maze.cellSize, (k + 1) * maze.cellSize);
 #else
-      // quadric, base, top, height, slices, stacks
       glPushMatrix();
       glTranslatef(i * maze.cellSize, j * maze.cellSize, k * maze.cellSize);
+      // quadric, base, top, height, slices, stacks
       gluCylinder(quadric, edgeRadius, edgeRadius, maze.cellSize, 4, 1);
       glPopMatrix();
 #endif // OutlineWithLines
@@ -194,45 +199,72 @@ void Maze3D::drawOutline(void) {
 #endif //OutlineWithLines
 }
 
+// draw a cylinder parallel to x, y, or z axis, from middle of cell <x1 y1 z1> to middle of cell <x2 y2 z2>.
+void Maze3D::drawCylinder(int x1, int y1, int z1, int x2, int y2, int z2) {
+   glPushMatrix();
+   glTranslatef((x1 + 0.5) * maze.cellSize, (y1 + 0.5) * maze.cellSize, (z1 + 0.5) * maze.cellSize);
+   // Figure out which axis cylinder is parallel to, and whether the direction is positive or negative,
+   // so we can rotate appropriately.
+   if (x1 != x2) glRotatef(x1 < x2 ? 90.0: -90.0, 0, 1, 0); // rotate 90 deg around y axis
+   else if (y1 != y2) glRotatef(y1 < y2 ? -90.0 : 90.0, 1, 0, 0); // rotate 90 deg around x axis
+   // else if (z1 < z2) // no rotation necessary
+   else if (z2 < z1) glRotatef(180.0, 1, 0, 0); // rotate 180 deg around x or y axis
+
+   //          quadric, baseRadius, topRadius,  height,   slices, stacks
+   glColor3f(1.0, 1.0, 0.65);
+   gluCylinder(quadric, routeRadius, routeRadius, cellSize, 6, 1);
+   glPopMatrix();
+}
+
 // draw lines along solution route
 void Maze3D::drawSolutionRoute(void) {
-   // yellowish lines
-   glColor3f(1.0, 1.0, 0.7);
+
+#ifdef RouteWithLines
    // Here we set a constant line width.
    // Problem is that this is not perspective-correct: the width of a nearby line appears
    // the same as that of a far-off line.
-   // However, since the solution route is mostly hidden inside the maze, the discrepancy shouldn't
-   // be too obvious.
-
-#ifdef OutlineWithLines
+   // Also, a line viewed nearly head-on won't have the depth cues that it would have if the nearer
+   // end were thicker.
+   // Since the solution route is mostly hidden inside the maze, the discrepancy shouldn't
+   // be too bothersome.
+   // But it would be worth trying as real objects (e.g. cylinders) to see how much better it looks.
+   // The drawbacks there are (1) a bit harder to draw, since you have to figure out which axes to rotate around --
+   // this can be fixed with a utility function; and (2) no easy stipple pattern -- but this could be addressed with
+   // a texture, if necessary.
+   glLineWidth(2.5);
+   // yellowish lines
+   glColor3f(1.0, 1.0, 0.7);
    glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT);
    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-   glLineWidth(2.5);
    glEnable(GL_LINE_STIPPLE);
    // stipple pattern is increasing length of dashes toward exit: (space) 1 2 3 4; binary 0010110111011110
    // reverse that (opengl quirk) and add commas: 0111,1011,1011,0100. Hex: 0x7bb4
    glLineStipple(10, 0x7bb4);
    glBindTexture(GL_TEXTURE_2D, GL_NONE); // no texture
    glBegin(GL_LINE_STRIP); // using lines for now
-#endif //OutlineWithLines
 
-   for (int c=0; c < solutionRouteLen; c++) {
-// assuming #ifdef OutlineWithLines
-      glVertex3f((solutionRoute[c].x + 0.5) * maze.cellSize,
-         (solutionRoute[c].y + 0.5) * maze.cellSize,
-         (solutionRoute[c].z + 0.5) * maze.cellSize);
-//#else
-//      // quadric, base, top, height, slices, stacks
-//      glPushMatrix();
-//      glTranslatef(i * maze.cellSize, j * maze.cellSize, k * maze.cellSize);
-//      gluCylinder(quadric, edgeRadius, edgeRadius, maze.cellSize, 4, 1);
-//      glPopMatrix();
-//#endif // OutlineWithLines
+#define midCell(c, ax) ((solutionRoute[c].ax + 0.5) * maze.cellSize)
+
+   for (int c = 0; c < solutionRouteLen; c++) {
+      glVertex3f(midCell(c, x), midCell(c, y), midCell(c, z));
    }
-#ifdef OutlineWithLines
+
    glEnd(); // GL_LINES
    glPopAttrib();   
-#endif //OutlineWithLines
+
+#else //RouteWithCylinders
+   for (int c = 0; c < solutionRouteLen - 1; c++)
+      drawCylinder(solutionRoute[c].x, solutionRoute[c].y, solutionRoute[c].z,
+         solutionRoute[c+1].x, solutionRoute[c+1].y, solutionRoute[c+1].z);
+
+//      glPushMatrix();
+//      glTranslatef(i * maze.cellSize, j * maze.cellSize, k * maze.cellSize);
+//      // quadric, base, top, height, slices, stacks
+//      gluCylinder(quadric, edgeRadius, edgeRadius, maze.cellSize, 4, 1);
+//      glPopMatrix();
+
+#endif // RouteWithLines/Cylinders
+
 }
 
 
