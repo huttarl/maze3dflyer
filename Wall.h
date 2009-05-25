@@ -24,8 +24,10 @@ public:
    // outsidePositive: true if "outside" of face is in positive axis direction.
    // only applies to CLOSED walls.
    bool outsidePositive;
+   // seeThrough: true if you can see through this wall (only applies to CLOSED walls)
+   bool seeThrough;
    Quad quad;
-   Wall() { state = UNINITIALIZED; outsidePositive = false; }
+   Wall() { state = UNINITIALIZED; outsidePositive = false; seeThrough = false; }
 
    void Wall::draw(char dir);
    void Wall::drawExit(int x, int y, int z, bool isEntrance);

@@ -2,7 +2,14 @@ Ideas and to-do's
 
 ('-' indicates not done; 'x' indicates done; '*' indicates important or urgent or extra cool/useful)
 
- x display solution (e.g. as white line from entrance to exit, from center of each cube to the next)
+ - fix bug: 'H' mode is preserved from one level to another, at least on the HUD, but the speed is not.
+   You have to toggle it off and on to get it to take effect.
+     - may be better to have a multi-level speed setting, since normal speed is too fast for computer beginners like my kids.
+ *- a different play mode:
+   - between entrance and exit, you have to pick up all the objects in the maze... e.g. apple, ball, and carrot;
+     next level add dog, next level egg; etc.
+   - show in lower right corner, the set of objects you've collected.
+ x display route solution (e.g. as white line from entrance to exit, from center of each cube to the next)
    Having solution will help with implementation of auto-pilot.
    x compute and store solution as sequence of cells
    x draw solution
@@ -15,9 +22,13 @@ Ideas and to-do's
      - save your current position / orientation ('mark') (don't save velocity)
      - teleport you to outside maze
      - show your saved position as some kind of glowing orb with glowing spines sticking out that penetrate maze walls. Should indicate orientation as well as location.
+       Diagonal spines through the corners of the cube would be sure to be visible. Orientation - how to show?
      - let you zoom around but not into maze; maybe just rotate around at a fixed radius from center of maze.
-       - WASD rotates you around sphere as if rotating the maze
+       - arrows (or WASD) rotates you around sphere as if rotating the maze
      - exit mode by teleporting back to your saved position / orientation
+   -* another way to get some view of the outside from inside is to have some see-through walls.
+     x Already implemented wall->seeThrough boolean.
+     - need to add rendering code to show a grill or sthg. Could even use the facade code?
  *x key, such as 'q', to toggle auto-forward mode. When this is on, it's like holding the 'w' key down.
    Like in Morrowind. This is canceled by pressing 'w', 's', or stop (space?)
  - detect when we're going to overflow max maze size.
@@ -290,10 +301,12 @@ Ideas and to-do's
 	I believe so. I've implemented this algorithm, and it seems to work well (but is not rigorously verified).
 	I modified the sparseness constraint to say B and C must be at least sparseness *Euclidean* distance apart,
 	not manhattan distance, to avoid direct diagonal adjacency.
- - a command to show the maze solution (route from entrance to exit), e.g. as a red line (cylinder)
+ x a command to show the maze solution (route from entrance to exit), e.g. as a red line (cylinder)
  - put some objects into the maze, for interest?
    - maybe dynamic, framed pictures on the walls, fetched from internet (google image search?) or from a folder,
      changed periodically while playing
+   -* maybe some random walls are see-through! perhaps they're slatted, like blinds. This would give you some
+     idea of where you are in the maze.
  *x use floor/wall/ceiling textures
    x I'm loading carpet and brick; why isn't it showing brick? probably because of begin/end
  x maybe avoid colliding with walls; see Fich demo for that.

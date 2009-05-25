@@ -104,6 +104,7 @@ void CellCoord::setStateOfWallTo(CellCoord *nc, Wall::WallState state) {
 	w->state = state;
 	if (state == Wall::CLOSED) {
 		w->outsidePositive = (nc->x - x + nc->y - y + nc->z - z > 0);
+                if (!(rand() % 6)) w->seeThrough = true;
 		//debugMsg("  %d %d %d.setWallTo(%d %d %d, %d): op=%c\n", x, y, z, nc->x, nc->y, nc->z,
 		//	state, w->outsidePositive ? 'y' : 'n');
 	}
