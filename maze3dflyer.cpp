@@ -87,6 +87,7 @@ bool    autoForward = false;    // keep moving forward without holding down 'w'
 bool    drawOutline = true, showSolutionRoute = false, showedSolutionThisLevel = false;
 bool    highSpeed = false;      // high-speed mode
 bool    flipTextures = false;   // exchange sky and maze textures
+bool    prizes = true;          // have prizes in the maze
 
 // these should probably move to glCamera or a subclass thereof.
 float	keyTurnRate = 2.0f; // how fast to turn in response to keys
@@ -109,7 +110,7 @@ const float zFar = (Maze3D::cellSize * 100.0f);
 
 GLfloat xheading = 0.0f, yheading = 0.0f;
 GLfloat xpos = 0.5f, ypos = 0.5f, zpos = 10.0f;
-GLUquadricObj *quadric;	
+GLUquadricObj *diskQuadric, *cylQuadric, *sphereQuadric;	
 
 const int numMazeTextures = (roof - ground + 1);		// Max # maze textures (not counting sky, effects, etc.)
 GLuint mazeTextures[numMazeTextures];	// Storage for texture indices
@@ -201,9 +202,7 @@ void generateMaze()
 
 	srand((int)(clock() % 3));
 	// pick a random starting cell and put it in the queue
-	queue[0].x = rand() % maze.w;
-	queue[0].y = rand() % maze.h;
-	queue[0].z = rand() % maze.d;
+	queue[0].placeRandomly();
 	queue[0].setCellState(Cell::passage);
         maze.numPassageCells = 1;
 	maze.ccEntrance = maze.ccExit = queue[0];
@@ -348,8 +347,10 @@ void initCellsWalls(bool initVertices = true) {
    for (i=0; i <= maze.w; i++)
       for (j=0; j <= maze.h; j++)
          for (k=0; k <= maze.d; k++) {
-	    if (i < maze.w && j < maze.h && k < maze.d)
+            if (i < maze.w && j < maze.h && k < maze.d) {
                maze.cells[i][j][k].state = Cell::uninitialized;
+               maze.cells[i][j][k].hasPrize = false;
+            }
 	    // debugMsg("%d %d %d ", i, j, k); d(1);
 	    if (j < maze.h && k < maze.d) {	// xWall:					
 	       maze.xWalls[i][j][k].state = (i == 0 || i == maze.w) ? outerWallState : Wall::UNINITIALIZED;
@@ -452,6 +453,7 @@ void newMaze() {
    initCellsWalls(false);
    generateMaze();
    maze.computeSolution();
+   if (prizes) maze.addPrizes();
 }
 
 void nextLevel() {
@@ -1116,8 +1118,12 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
    glLineWidth(1.0); // for outline. 1 is default anyway.
    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
 
-   quadric = gluNewQuadric();			// create a quadric object for cylinders, discs, etc.
-   gluQuadricNormals(quadric, GLU_SMOOTH);	// Create Smooth Normals ( NEW )
+   sphereQuadric = gluNewQuadric();			// create a quadric object for cylinders, discs, etc.
+   diskQuadric = gluNewQuadric();
+   cylQuadric = gluNewQuadric();
+   gluQuadricNormals(sphereQuadric, GLU_SMOOTH);	// Create Smooth Normals ( NEW )
+   gluQuadricNormals(diskQuadric, GLU_SMOOTH);
+   gluQuadricNormals(cylQuadric, GLU_SMOOTH);
    // gluQuadricTexture(quadric, GL_TRUE);		// Create Texture Coords ( NEW )
 
    level = 1;
@@ -1360,7 +1366,7 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 
 #ifdef DEBUGGING
    //// cylinders for z-axis identification
-   //gluCylinder(quadric, 0.2f, 0.2f, 5.0f, 10, 10);
+   //gluCylinder(cylQuadric, 0.2f, 0.2f, 5.0f, 10, 10);
 #endif
 
    // Process quads
@@ -1442,6 +1448,7 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
 
    if (drawOutline) maze.drawOutline();
    if (showSolutionRoute) maze.drawSolutionRoute();
+   if (prizes) maze.drawPrizes();
 
    // display entrance/exit (may mess up rot/transf matrix)
    maze.ccEntrance.drawExit(maze.entranceWall, true);
@@ -2125,6 +2132,15 @@ bool collide(glPoint &p, glVector &v)
         }
         else if (qcc == maze.ccExit && maze.whenEntered) {
            maze.hasFoundExit = true; // solved maze!
+        }
+
+        if (qcc.isInBounds() && maze.cells[qcc.x][qcc.y][qcc.z].hasPrize) {
+            maze.cells[qcc.x][qcc.y][qcc.z].hasPrize = false;
+            maze.nPrizesLeft--;
+            debugMsg("Took prize at %d %d %d; %d left.\n",
+               qcc.x, qcc.y, qcc.z, maze.nPrizesLeft);
+            //## TODO: set prizes[...].taken = true;
+            //## TODO: update display?
         }
 
 	// debugMsg("In collide(<%.2f %.2f %.2f>... ", q.x, q.y, q.z);

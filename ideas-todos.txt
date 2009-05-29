@@ -2,13 +2,27 @@ Ideas and to-do's
 
 ('-' indicates not done; 'x' indicates done; '*' indicates important or urgent or extra cool/useful)
 
+ **- would be very cool to display the maze while building it.
+   - would probably have to pass parameters to the drawing functions to treat incomplete data a little differently.
+   - Draw "forbidden" cells as maybe wire-frame with diagon lines.
+   - Update after every new passage cell is added or new cell marked forbidden? I forget what the states are during building process.
+   - maybe outline in yellow, cells that are in the queue. (But check maze bounds)
+ -q lighting: walls, and spheres, would look better if lighted based on normal;
+   - maybe also based on whether they're inside or outside.
  - fix bug: 'H' mode is preserved from one level to another, at least on the HUD, but the speed is not.
    You have to toggle it off and on to get it to take effect.
      - may be better to have a multi-level speed setting, since normal speed is too fast for computer beginners like my kids.
  *- a different play mode:
    - between entrance and exit, you have to pick up all the objects in the maze... e.g. apple, ball, and carrot;
      next level add dog, next level egg; etc.
-   - show in lower right corner, the set of objects you've collected.
+     x generated them
+     x display them
+     - give them images and names - how to configure?
+     - display images and names
+     x have them 'taken' as user flies over them
+       - need more visual feedback
+     - maybe have exit disc with slash across it until all prizes taken. And even non-navigable!
+   - show in lower right corner, the set of prizes you've collected. Or at least the count of prizes remaining.
  x display route solution (e.g. as white line from entrance to exit, from center of each cube to the next)
    Having solution will help with implementation of auto-pilot.
    x compute and store solution as sequence of cells

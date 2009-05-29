@@ -3,7 +3,7 @@
 
 // Two different ways to draw outline. Define exactly one.
 #define OutlineWithLines 1
-// I don't recommend cylinders. At close range, they look like crude cylinders
+// I don't recommend outlining with cylinders. At close range, they look like crude cylinders
 // (square prisms). At far range they look like dotted lines.
 // #define OutlineWithCylinders 1
 
@@ -24,6 +24,7 @@ clock_t Maze3D::whenEntered = (clock_t)0, Maze3D::whenSolved = (clock_t)0, Maze3
 bool Maze3D::hasFoundExit = false, Maze3D::newBest = false;
 float Maze3D::edgeRadius = 0.006 * cellSize;
 float Maze3D::routeRadius = 0.01 * cellSize;
+int Maze3D::seeThroughRarity = 6;
 
 Maze3D::Maze3D(int _w, int _h, int _d, int _s, int _b) {
    w = _w, h = _h, d = _d;
@@ -38,6 +39,7 @@ Maze3D::Maze3D(int _w, int _h, int _d, int _s, int _b) {
    yWalls = NULL;
    zWalls = NULL;
    solutionRoute = NULL;
+   nPrizes = 0; nPrizesLeft = 0;
 }
 
 // setDims should be called only before SetupWorld().
@@ -165,7 +167,7 @@ void Maze3D::drawZEdge(int i, int j, int k) {
       glPushMatrix();
       glTranslatef(i * maze.cellSize, j * maze.cellSize, k * maze.cellSize);
       // quadric, base, top, height, slices, stacks
-      gluCylinder(quadric, edgeRadius, edgeRadius, maze.cellSize, 4, 1);
+      gluCylinder(cylQuadric, edgeRadius, edgeRadius, maze.cellSize, 4, 1);
       glPopMatrix();
 #endif // OutlineWithLines
 
@@ -212,7 +214,7 @@ void Maze3D::drawCylinder(int x1, int y1, int z1, int x2, int y2, int z2) {
 
    //          quadric, baseRadius, topRadius,  height,   slices, stacks
    glColor3f(1.0, 1.0, 0.65);
-   gluCylinder(quadric, routeRadius, routeRadius, cellSize, 6, 1);
+   gluCylinder(cylQuadric, routeRadius, routeRadius, cellSize, 6, 1);
    glPopMatrix();
 }
 
@@ -348,4 +350,73 @@ int Maze3D::fillInDeadEnd(int x, int y, int z, CellCoord *route) {
    // debugMsg("\n");
 
    return c;
+}
+
+extern int level;
+
+// Populate the maze with prize objects.
+void Maze3D::addPrizes() {
+   nPrizes = level;
+   if (nPrizes > prizeMax) nPrizes = prizeMax;
+   nPrizesLeft = nPrizes;
+
+   CellCoord ccTmp(0,0,0);
+
+   for (int i=0; i < nPrizes; i++) {
+      int attempts = 0;
+      do {
+         ccTmp.placeRandomly();
+         debugMsg("placing prize %d at <%d %d %d>: ", i, ccTmp.x, ccTmp.y, ccTmp.z);
+         if (!ccTmp.isCellPassage()) debugMsg("!ccTmp.isCellPassage()\n");
+         else if (ccTmp == ccEntrance) debugMsg("ccTmp == ccEntrance\n");
+         else if (ccTmp == ccExit) debugMsg("ccTmp == ccExit\n");
+         else if (cells[ccTmp.x][ccTmp.y][ccTmp.z].hasPrize) debugMsg("hasPrize\n");
+         else debugMsg("ok!\n");
+         if (++attempts > 50) {
+            debugMsg("Too many attempts for prize %d; giving up.\n");
+            break; // this will exit only the do loop, and place the prize in an invalid spot.
+         }
+      } while (!ccTmp.isCellPassage() || ccTmp == ccEntrance || ccTmp == ccExit || cells[ccTmp.x][ccTmp.y][ccTmp.z].hasPrize);
+
+      prizes[i].where = ccTmp;
+      cells[ccTmp.x][ccTmp.y][ccTmp.z].hasPrize = true;
+   }
+
+   return;
+}
+
+// draw the prizes (that are not taken).
+void Maze3D::drawPrizes() {
+   glLineWidth(1.0); // for outline. 1 is default anyway.
+
+   const float throbRate = 0.1, throbSize = 0.1;
+
+   for (int i=0; i < nPrizes; i++) {
+      if (!prizes[i].taken) {
+         CellCoord *cc = &(prizes[i].where);
+         // first check whether the prize was just taken.
+         if (!(cells[cc->x][cc->y][cc->z].hasPrize)) {
+            prizes[i].taken = true;
+            continue; // It was taken so don't draw it.
+         }
+         glPushMatrix();
+         glTranslatef((cc->x + 0.5) * maze.cellSize, (cc->y + 0.5) * maze.cellSize, (cc->z + 0.5) * maze.cellSize);
+         // spin
+         float animFactor = maze.exitRot + cc->x*10 + cc->y*10 + cc->z*10;
+         float radius = 0.15 * maze.cellSize * (1.0 + throbSize * sin(animFactor * throbRate));
+         glRotatef(animFactor, 0.0f, 0.0f, 1.0f);
+         glRotatef(animFactor, 0.0f, 1.0f, 0.0f);
+         // draw faces of sphere
+         gluQuadricDrawStyle(sphereQuadric, GLU_FILL);
+         glColor3f(1.0, 1.0, 1.0); // white
+         // quadric, radius, slices, stacks
+         gluSphere(sphereQuadric, radius, 9, 9);
+         // draw outline of sphere?
+         gluQuadricDrawStyle(sphereQuadric, GLU_LINE);
+         glColor3f(0.1, 0.1, 1.0); // blue
+         // quadric, radius, slices, stacks
+         gluSphere(sphereQuadric, radius, 9, 9);
+         glPopMatrix();
+      }
+   }
 }

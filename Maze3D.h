@@ -6,11 +6,14 @@
 #include "Cell.h"
 #include "CellCoord.h"
 #include "Wall.h"
+#include "Prize.h"
 
 class Maze3D {
 public:
    const static int wMax = 30, hMax = 30, dMax = 30;	// This is necessary because C++ doesn't do fully dynamic
 										          // multidimensional arrays. I've been spoiled by Java.
+   const static int prizeMax = 30; // max # of prizes
+   int nPrizes, nPrizesLeft;
 
    // The following probably belong in a Maze class.
    int w, h, d;			// width (x) of maze in cells
@@ -35,6 +38,7 @@ public:
    static float exitThickness;
    static float edgeRadius;
    static float routeRadius;
+   static int seeThroughRarity; // 1 out of seeThroughRarity walls will be see-through.
    /* The maze consists of both cells and walls. Each wall may be shared by two cells. */
    Cell (*cells)[hMax][dMax];		// The maze's cells
    CellCoord ccExit, ccEntrance;
@@ -46,6 +50,7 @@ public:
    Wall (*zWalls)[Maze3D::hMax][Maze3D::dMax+1];  // Walls facing along Z axis   [w][h][d+1]
    // Pointers to the open "walls" at entrance and exit.
    Wall *exitWall, *entranceWall;
+   Prize prizes[prizeMax];
 
    // Maze3D::Maze3D();
    Maze3D(int _w = 8, int _h = 8, int _d = 8, int _s = 3, int _b = 2);
@@ -66,10 +71,13 @@ public:
    void drawZEdge(int i, int j, int k);
    void drawOutline(void);
    void drawSolutionRoute(void);
+   void drawPrizes(void);
    void drawCylinder(int x1, int y1, int z1, int x2, int y2, int z2);
 
    int solutionRouteLen;
    void computeSolution(void);
+
+   void addPrizes(void);
 
 private:
    int fillInDeadEnd(int x, int y, int z, CellCoord *route);
