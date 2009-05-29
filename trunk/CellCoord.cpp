@@ -104,7 +104,7 @@ void CellCoord::setStateOfWallTo(CellCoord *nc, Wall::WallState state) {
 	w->state = state;
 	if (state == Wall::CLOSED) {
 		w->outsidePositive = (nc->x - x + nc->y - y + nc->z - z > 0);
-                if (!(rand() % 6)) w->seeThrough = true;
+                if (!(rand() % maze.seeThroughRarity)) w->seeThrough = true;
 		//debugMsg("  %d %d %d.setWallTo(%d %d %d, %d): op=%c\n", x, y, z, nc->x, nc->y, nc->z,
 		//	state, w->outsidePositive ? 'y' : 'n');
 	}
@@ -264,6 +264,13 @@ bool CellCoord::checkNeighborOpen(int dx, int dy, int dz, CellCoord &neighbor)
 // Return true if this cc's coords are inside the maze bounds.
 bool CellCoord::isInBounds(void) {
    return (x >= 0 && x < maze.w && y >= 0 && y < maze.h && z >= 0 && z < maze.d);
+}
+
+// Set coords to random cell within bounding box of maze.
+void CellCoord::placeRandomly(void) {
+   x = rand() % maze.w;
+   y = rand() % maze.h;
+   z = rand() % maze.d;
 }
 
 extern CellCoord ccExit, ccEntrance;

@@ -106,7 +106,7 @@ void Wall::drawExit(int x, int y, int z, bool isEntrance) {
    glRotatef(isEntrance ? maze.exitRot : -maze.exitRot, 0.0f, 0.0f, 1.0f);
 
    // gluDisk(quadric, innerRadius, outerRadius, slices, loops)
-   gluDisk(quadric, Maze3D::exitHoleRadius * 0.8, Maze3D::exitHoleRadius, 7, 3);
+   gluDisk(diskQuadric, Maze3D::exitHoleRadius * 0.8, Maze3D::exitHoleRadius, 7, 3);
 
    glPopMatrix();
 }

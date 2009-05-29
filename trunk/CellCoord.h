@@ -97,6 +97,9 @@ public:
         // Return true if this cc's coords are inside the maze bounds.
         bool isInBounds(void);
 
+        // Set coordinates to random value within bounding box of maze.
+        void placeRandomly(void);
+
 private:
         // Check whether neighbor cell at this + (dx, dy, dz) is open
         // (i.e. that is passage and has isOnSolutionRoute = true).

@@ -21,6 +21,6 @@ typedef enum { ground, wall1, wall2, portal, roof } Material;
 
 typedef enum { fadingIn, playing, autopilot, celebrating, fadingOut } GameState;
 
-extern GLUquadricObj *quadric;	
+extern GLUquadricObj *diskQuadric, *cylQuadric, *sphereQuadric;
 
 #endif                  /* __maze3dflyer_h__ */
