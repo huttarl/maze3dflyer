@@ -40,7 +40,7 @@ Maze3D::Maze3D(int _w, int _h, int _d, int _s, int _b) {
    zWalls = NULL;
    solutionRoute = NULL;
    nPrizes = 0; nPrizesLeft = 0;
-   hitLockedExit = false;
+   hitLockedExit = isGenerating = false;
 }
 
 // setDims should be called only before SetupWorld().
@@ -96,74 +96,109 @@ extern bool firstTime; // for debugging
 
 // Draw an outline edge that is parallel to the X axis, if it ought to be drawn.
 // Assumes i < w.
-void Maze3D::drawXEdge(int i, int j, int k) {
-   //FIXME: there are missing edges and spurious edges along outer planes
-   bool jplus, jminus, kplus, kminus;
-   // are xy walls in +y/-y directions closed?
-   jplus  = j < h && IsWall(&zWalls[i][j  ][k]);
-   jminus = j > 0 && IsWall(&zWalls[i][j-1][k]);;
-   // are xz walls in +z/-z directions closed?
-   kplus  = k < d && IsWall(&yWalls[i][j][k  ]);
-   kminus = k > 0 && IsWall(&yWalls[i][j][k-1]);
+// Outputs two vertices for inclusion in a glBegin/End(GL_LINES).
+// If forbidden is true, draw only edges of "forbidden" cells.
+// Otherwise, draw only edges of "passage" cells.
+void Maze3D::drawXEdge(int i, int j, int k, bool forbidden) {
+   bool goAhead;
+   if (forbidden) {
+      goAhead =
+         (j < w && ((k < d && cells[i][j][k].state == Cell::forbidden)
+                 || (k > 0 && cells[i][j][k-1].state == Cell::forbidden)))
+         ||
+         (j > 0 && ((k < d && cells[i][j-1][k].state == Cell::forbidden)
+                 || (k > 0 && cells[i][j-1][k-1].state == Cell::forbidden)));
+   } else {
+      bool jplus, jminus, kplus, kminus;
+      // are xy walls in +y/-y directions closed?
+      jplus  = j < h && IsWall(&zWalls[i][j  ][k]);
+      jminus = j > 0 && IsWall(&zWalls[i][j-1][k]);;
+      // are xz walls in +z/-z directions closed?
+      kplus  = k < d && IsWall(&yWalls[i][j][k  ]);
+      kminus = k > 0 && IsWall(&yWalls[i][j][k-1]);
+
+      // draw an edge only if there are two walls at right angles to e.o.
+      goAhead = (jplus || jminus) && (kplus || kminus);
+   }
 
    // For now, just draw outlines for external edges
    //TODO: consider internal edges too
 
-   //// debugging:
-   //if (firstTime) {
-   //   debugMsg("drawXEdge(%d %d %d) - [%s %s %s %s]: %d\n", i, j, k,
-   //      jplus  ? "j+" : "",
-   //      jminus ? "j-" : "",
-   //      kplus  ? "k+" : "",
-   //      kminus ? "k-" : ""
-   //      );
-   //}
-
-   // draw an edge only if there are two walls at right angles to e.o.
-   if ((jplus || jminus) && (kplus || kminus)) {
+   if (goAhead) {
       // For now, we'll try lines, not quads; default width (prefer 1 pixel)
       // glColor3f(1.0, 0.0, 0.0); // red - debugging
-      glVertex3f(i * maze.cellSize, j * maze.cellSize, k * maze.cellSize);
-      glVertex3f((i + 1) * maze.cellSize, j * maze.cellSize, k * maze.cellSize);
+      glvc(i, j, k);
+      glvc((i + 1), j, k);
    }
 }
 
 // Draw an outline edge that is parallel to the Y axis, if it ought to be drawn.
 // Assumes j < h.
-void Maze3D::drawYEdge(int i, int j, int k) {
-   bool iplus, iminus, kplus, kminus;
-   // are xy walls in +x/-x directions closed?
-   iplus  = i < w && IsWall(&zWalls[i  ][j][k]);
-   iminus = i > 0 && IsWall(&zWalls[i-1][j][k]);
-   // are yz walls in +z/-z directions closed?
-   kplus  = k < d && IsWall(&xWalls[i][j][k  ]);
-   kminus = k > 0 && IsWall(&xWalls[i][j][k-1]);
+// Outputs two vertices for inclusion in a glBegin/End(GL_LINES).
+// If forbidden is true, draw only edges of "forbidden" cells.
+// Otherwise, draw only edges of "passage" cells.
+void Maze3D::drawYEdge(int i, int j, int k, bool forbidden) {
+   bool goAhead;
+   if (forbidden) {
+      goAhead =
+         (i < w && ((k < d && cells[i][j][k].state == Cell::forbidden)
+                 || (k > 0 && cells[i][j][k-1].state == Cell::forbidden)))
+         ||
+         (i > 0 && ((k < d && cells[i-1][j][k].state == Cell::forbidden)
+                 || (k > 0 && cells[i-1][j][k-1].state == Cell::forbidden)));
+   } else {
+      bool iplus, iminus, kplus, kminus;
+      // are xy walls in +x/-x directions closed?
+      iplus  = i < w && IsWall(&zWalls[i  ][j][k]);
+      iminus = i > 0 && IsWall(&zWalls[i-1][j][k]);
+      // are yz walls in +z/-z directions closed?
+      kplus  = k < d && IsWall(&xWalls[i][j][k  ]);
+      kminus = k > 0 && IsWall(&xWalls[i][j][k-1]);
+
+      goAhead = (iplus || iminus) && (kplus || kminus);
+   }
 
    // draw an edge only if there are two walls at right angles to e.o.
-   if ((iplus || iminus) && (kplus || kminus)) {
+   if (goAhead) {
       // glColor3f(0.0, 1.0, 0.0); // green - debugging
-      glVertex3f(i * maze.cellSize, j * maze.cellSize, k * maze.cellSize);
-      glVertex3f(i * maze.cellSize, (j + 1) * maze.cellSize, k * maze.cellSize);
+      glvc(i, j, k);
+      glvc(i, (j + 1), k);
    }
 }
 
 // Draw an outline edge that is parallel to the Z axis, if it ought to be drawn.
 // Assumes k < d.
-void Maze3D::drawZEdge(int i, int j, int k) {
-   bool iplus, iminus, jplus, jminus;
-   // are xz walls in +x/-x directions closed?
-   iplus  = i < w && IsWall(&yWalls[i  ][j][k]);
-   iminus = i > 0 && IsWall(&yWalls[i-1][j][k]);
-   // are yz walls in +y/-y directions closed?
-   jplus  = j < h && IsWall(&xWalls[i][j  ][k]);
-   jminus = j > 0 && IsWall(&xWalls[i][j-1][k]);
+// Outputs two vertices for inclusion in a glBegin/End(GL_LINES).
+// If forbidden is true, draw only edges of "forbidden" cells.
+// Otherwise, draw only edges of "passage" cells.
+void Maze3D::drawZEdge(int i, int j, int k, bool forbidden) {
+   bool goAhead;
+   if (forbidden) {
+      goAhead =
+         (i < w && ((j < d && cells[i][j  ][k].state == Cell::forbidden)
+                 || (j > 0 && cells[i][j-1][k].state == Cell::forbidden)))
+         ||
+         (i > 0 && ((j < d && cells[i-1][j  ][k].state == Cell::forbidden)
+                 || (j > 0 && cells[i-1][j-1][k].state == Cell::forbidden)));
+   } else {
+      bool iplus, iminus, jplus, jminus;
+      // are xz walls in +x/-x directions closed?
+      iplus  = i < w && IsWall(&yWalls[i  ][j][k]);
+      iminus = i > 0 && IsWall(&yWalls[i-1][j][k]);
+      // are yz walls in +y/-y directions closed?
+      jplus  = j < h && IsWall(&xWalls[i][j  ][k]);
+      jminus = j > 0 && IsWall(&xWalls[i][j-1][k]);
+
+      // draw an edge only if there are two walls at right angles to e.o.
+      goAhead = (iplus || iminus) && (jplus || jminus);
+   }
 
    // draw an edge only if there are two walls at right angles to e.o.
-   if ((iplus || iminus) && (jplus || jminus)) {
+   if (goAhead) {
       // glColor3f(0.0, 0.0, 1.0); // blue - debugging
 #ifdef OutlineWithLines
-      glVertex3f(i * maze.cellSize, j * maze.cellSize, k * maze.cellSize);
-      glVertex3f(i * maze.cellSize, j * maze.cellSize, (k + 1) * maze.cellSize);
+      glvc(i, j, k);
+      glvc(i, j, (k + 1));
 #else
       glPushMatrix();
       glTranslatef(i * maze.cellSize, j * maze.cellSize, k * maze.cellSize);
@@ -174,6 +209,7 @@ void Maze3D::drawZEdge(int i, int j, int k) {
 
    }
 }
+
 
 // draw dark edges along outlines
 void Maze3D::drawOutline(void) {
@@ -200,6 +236,67 @@ void Maze3D::drawOutline(void) {
    glEnd(); // GL_LINES
    glPopAttrib();   
 #endif //OutlineWithLines
+}
+
+// draw outlines of "forbidden" cells during maze generation
+void Maze3D::drawForbidden(void) {
+   // for smooth lines, need to turn on blending.
+   // see http://www.opengl.org/resources/faq/technical/rasterization.htm#rast0150
+   glColor3f(1.0, 0.3, 0.3);  // red
+   glLineWidth(2.0); // 1 is default anyway.
+
+   glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT);
+   glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   glBindTexture(GL_TEXTURE_2D, GL_NONE); // no texture
+   glBegin(GL_LINES); // using lines for now
+   for (int i=0; i <= w; i++)
+      for (int j=0; j <= h; j++)
+         for (int k=0; k <= d; k++) {
+            // For every vertex in the maze, draw up to 3 edges
+            if (i < w) drawXEdge(i, j, k, true);
+            if (j < h) drawYEdge(i, j, k, true);
+            if (k < d) drawZEdge(i, j, k, true);
+         }
+   glEnd(); // GL_LINES
+   glPopAttrib();   
+}
+
+// Draw the cubes in the generating queue.
+void Maze3D::drawQueue(void) {
+   glColor3f(0.3, 0.3, 1.0); // blue
+   glLineWidth(3.0);
+   glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT);
+   glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   glBindTexture(GL_TEXTURE_2D, GL_NONE); // no texture
+   glBegin(GL_LINES);
+
+   for (int c=0; c < queueSize; c++) {
+      CellCoord *cc = &(queue[c]);
+
+      // x edges
+      for (int j = cc->y; j <= cc->y + 1; j++)
+         for (int k = cc->z; k <= cc->z + 1; k++) {
+            glvc(cc->x, j, k);
+            glvc(cc->x + 1, j, k);
+         }
+
+      // y edges
+      for (int i = cc->x; i <= cc->x + 1; i++)
+         for (int k = cc->z; k <= cc->z + 1; k++) {
+            glvc(i, cc->y, k);
+            glvc(i, cc->y + 1, k);
+         }
+
+      // z edges
+      for (int i = cc->x; i <= cc->x + 1; i++)
+         for (int j = cc->y; j <= cc->y + 1; j++) {
+            glvc(i, j, cc->z);
+            glvc(i, j, cc->z + 1);
+         }
+   }
+
+   glEnd(); // GL_LINES
+   glPopAttrib();   
 }
 
 // draw a cylinder parallel to x, y, or z axis, from middle of cell <x1 y1 z1> to middle of cell <x2 y2 z2>.

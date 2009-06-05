@@ -14,7 +14,12 @@
  */
 
 #include <stdlib.h> // In Windows, stdlib.h must come before glut.h
+#ifdef WIN32
 #include <windows.h>
+#define usleep(x) Sleep((x)/1000)
+#else
+#include <unistd.h>
+#endif
 #include <math.h>
 #include <stdio.h>
 #include <cstdlib> //FIXME: is this portable?
@@ -51,6 +56,8 @@ void SetupWorld(void);
 /* Return true iff moving from point p along vector v would collide with a wall. */
 bool collide(glPoint &p, glVector &v);
 
+bool OneStep(MSG *msg);
+int DrawGLScene(GLvoid);
 void CheckMouse(void);
 bool CheckKeys(void);
 void sequence(void);
@@ -88,6 +95,9 @@ bool    drawOutline = true, showSolutionRoute = false, showedSolutionThisLevel =
 bool    highSpeed = false;      // high-speed mode
 bool    flipTextures = false;   // exchange sky and maze textures
 bool    prizes = true;          // have prizes in the maze
+bool    animateGeneration = true; // show the maze while generating it?
+int     animGenDur = 5;         // total duration (seconds) for maze gen animation
+int     animGenDelay = 20000;   // microseconds between animation steps
 
 // these should probably move to glCamera or a subclass thereof.
 float	keyTurnRate = 2.0f; // how fast to turn in response to keys
@@ -203,20 +213,25 @@ LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);	// Declaration For WndProc
 
 void generateMaze()
 {
-	CellCoord *queue = new CellCoord[maze.w * maze.h * maze.d], *currCell, temp, neighbors[6];
-	int queueSize = 0, addedNeighbors = 0, eemhdist = 0, ncmhdist = 0;
+        CellCoord *currCell, temp, neighbors[6];
+        int addedNeighbors = 0, eemhdist = 0, ncmhdist = 0;
+
+	maze.queue = new CellCoord[maze.w * maze.h * maze.d];
+	maze.queueSize = 0;
 
 	srand((int)(clock() % 3));
 	// pick a random starting cell and put it in the queue
-	queue[0].placeRandomly();
-	queue[0].setCellState(Cell::passage);
+	maze.queue[0].placeRandomly();
+	maze.queue[0].setCellState(Cell::passage);
         maze.numPassageCells = 1;
-	maze.ccEntrance = maze.ccExit = queue[0];
-	queueSize++;
+	maze.ccEntrance = maze.ccExit = maze.queue[0];
+	maze.queueSize++;
+
+        MSG msg; // Windows dependency
 
 	do {
-		// select a cell at random from the queue
-		currCell = &(queue[rand() % queueSize]);
+                // select a cell at random from the queue
+		currCell = &(maze.queue[rand() % maze.queueSize]);
 		//debugMsg("Picked cell %d %d %d. ", currCell->x, currCell->y, currCell->z);
 
 		// Should this be the new entrance or exit?
@@ -296,7 +311,8 @@ void generateMaze()
 					if (passable) {
 						currCell->setStateOfWallTo(ni, Wall::OPEN);
 						ni->setCellState(Cell::passage);
-						queue[queueSize++] = *ni;
+
+						maze.queue[maze.queueSize++] = *ni;
 						addedNeighbors++;
 					} else {
 						currCell->setStateOfWallTo(ni, Wall::CLOSED);
@@ -308,19 +324,26 @@ void generateMaze()
 						state, ni->x, ni->y, ni->z);
 					assert(state == Cell::uninitialized || state == Cell::passage || state == Cell::forbidden);
 			}
+
+                        // animate the drawing
+                        if (animateGeneration) {
+                           (void)OneStep(&msg); //### TODO: should check if user quit program
+                           usleep(animGenDelay);
+                        }
+
 		}
 
                 maze.numPassageCells += addedNeighbors;
 
 		// remove currCell from the queue (swap in last cell of queue)
-		if (currCell - queue != queueSize - 1) {
+		if (currCell - maze.queue != maze.queueSize - 1) {
 			temp = *currCell;
-			*currCell = queue[queueSize-1];
-			queue[queueSize-1] = temp;
+			*currCell = maze.queue[maze.queueSize-1];
+			maze.queue[maze.queueSize-1] = temp;
 		}
-		queueSize--;
-		//debugMsg("qsize afterwards: %d\n", queueSize);
-	} while (queueSize > 0);
+		maze.queueSize--;
+		//debugMsg("qsize afterwards: %d\n", maze.queueSize);
+	} while (maze.queueSize > 0);
 
 	// Add an entrance and exit.
 	maze.entranceWall = maze.ccEntrance.openAWall();
@@ -332,7 +355,8 @@ void generateMaze()
 	//xWalls[0][  0][  0].state = Wall::OPEN;
 	//xWalls[w][h-1][d-1].state = Wall::OPEN;
 
-	delete [] queue;
+	delete [] maze.queue;
+        maze.queue = NULL;
 
         HighScoreList::complexityStats();
 }
@@ -452,13 +476,27 @@ void initCellsWalls(bool initVertices = true) {
 	    // debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
          }
 
-   return;
+
+     maze.entranceWall = NULL;
+     maze.exitWall = NULL;
+    
+     return;
 }
 
 void newMaze() {
    initCellsWalls(false);
+   maze.nPrizes = maze.nPrizesLeft = 0; // needed for animating generation of maze without old prizes lying around
+
+   maze.isGenerating = true;
+
+   int estSteps = maze.estPassages() * 7; // for each passage cell, one cube + 7 walls, though many walls overlap
+   animGenDelay = int(animGenDur * 1000000.0 / estSteps);
+   if (animGenDelay > 30000) animGenDelay = 30000;
+
    generateMaze();
    maze.computeSolution();
+   maze.isGenerating = false;
+
    if (prizes) maze.addPrizes();
    maze.whenEntered = 0;
 }
@@ -517,8 +555,8 @@ void SetupWorld()
    Cam.m_ForwardVelocity = 0.0f;
    Cam.m_SidewaysVelocity = 0.0f;
 
-   newMaze();
    Cam.StandBack(maze.w, maze.h, maze.d, maze.cellSize);
+   newMaze();
 
    ap = new Autopilot();
    ap->init(maze, Cam);
@@ -1461,16 +1499,21 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
    glEnd();
 
    if (drawOutline) maze.drawOutline();
+   if (maze.isGenerating) {
+      maze.drawForbidden();
+      maze.drawQueue();
+   }
    if (showSolutionRoute) maze.drawSolutionRoute();
-   if (prizes) maze.drawPrizes();
+   if (prizes && maze.nPrizesLeft > 0) maze.drawPrizes();
 
    // display entrance/exit (may mess up rot/transf matrix)
-   maze.ccEntrance.drawExit(maze.entranceWall, true);
-   maze.ccExit.drawExit(maze.exitWall, false);
+   if (maze.entranceWall) maze.ccEntrance.drawExit(maze.entranceWall, true);
+   if (maze.exitWall) maze.ccExit.drawExit(maze.exitWall, false);
 
    // if just solved the maze, flash the screen
    if (gameState == celebrating) celebrationEffect();
-   else if (gameState == fadingIn || gameState == fadingOut) fadingEffect();
+   //### for now, disable the fadingIn effect, so we can see maze being generated.
+   else if (/* gameState == fadingIn || */ gameState == fadingOut) fadingEffect();
 
    if (mainMsg[0] && clock() > showMainMsgTill)
       mainMsg[0] = '\0';
@@ -1805,15 +1848,50 @@ void handleArgs(int argc, LPWSTR *argv) {
 
 }
 
+bool OneStep(MSG *msg) {
+      bool	done = false;								// Bool Variable To Exit Loop
+
+      if (PeekMessage(msg,NULL,0,0,PM_REMOVE))	// Is There A Message Waiting?
+      {
+	    if (msg->message==WM_QUIT)				// Have We Received A Quit Message?
+	    {
+		     done = true;							// If So done=TRUE
+	    }
+	    else									// If Not, Deal With Window Messages
+	    {
+		     TranslateMessage(msg);				// Translate The Message
+		     DispatchMessage(msg);				// Dispatch The Message
+	    }
+      }
+      else										// If There Are No Messages
+      {
+	    // Draw The Scene.  Watch For ESC Key And Quit Messages From DrawGLScene()
+	    if ((active && !DrawGLScene()) || keysDown[VK_ESCAPE])	// Active?  Was There A Quit Received?
+	    {
+		     done = true;							// ESC or DrawGLScene Signalled A Quit
+	    }
+	    else									// Not Time To Quit, Update Screen
+	    {
+		     SwapBuffers(hDC);					// Swap Buffers (Double Buffering)
+		     if (CheckKeys()) done = true;
+		     else CheckMouse();
+		     if (autopilotMode) ap->run();
+                     sequence();
+	    }
+      }
+
+      return done;
+}
+
+
 int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 					HINSTANCE	hPrevInstance,		// Previous Instance
 					LPSTR		lpCmdLine,			// Command Line Parameters
 					int			nCmdShow)			// Window Show State
 {
-	MSG		msg;									// Windows Message Structure
-	BOOL	done=FALSE;								// Bool Variable To Exit Loop
+        MSG msg;
 
-        fullscreen = false;
+        fullscreen = FALSE;
 
         LPWSTR *szArglist;
         int nArgs;
@@ -1838,37 +1916,8 @@ int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
         gameState = fadingIn;
         fadeTill = clock() + durFade;
 
-	while(!done)									// Loop That Runs While done=FALSE
-	{
-		if (PeekMessage(&msg,NULL,0,0,PM_REMOVE))	// Is There A Message Waiting?
-		{
-			if (msg.message==WM_QUIT)				// Have We Received A Quit Message?
-			{
-				done=TRUE;							// If So done=TRUE
-			}
-			else									// If Not, Deal With Window Messages
-			{
-				TranslateMessage(&msg);				// Translate The Message
-				DispatchMessage(&msg);				// Dispatch The Message
-			}
-		}
-		else										// If There Are No Messages
-		{
-			// Draw The Scene.  Watch For ESC Key And Quit Messages From DrawGLScene()
-			if ((active && !DrawGLScene()) || keysDown[VK_ESCAPE])	// Active?  Was There A Quit Received?
-			{
-				done=TRUE;							// ESC or DrawGLScene Signalled A Quit
-			}
-			else									// Not Time To Quit, Update Screen
-			{
-				SwapBuffers(hDC);					// Swap Buffers (Double Buffering)
-				if (CheckKeys()) done = true;
-				else CheckMouse();
-				if (autopilotMode) ap->run();
-                                sequence();
-			}
-		}
-	}
+	while(!OneStep(&msg))
+           ;									// Loop That Runs While done=FALSE
 
 	// Shutdown
 	KillGLWindow();										// Kill The Window
@@ -2263,11 +2312,11 @@ void sequence(void) {
          break;
       case fadingOut:
          if (now >= fadeTill) {
+            gameState = fadingIn;
+            fadeTill = now + durFade;
             nextLevel();
             if (showScores)
                createTextDLs(scoreListDL, false, highScoreList.toString(maze, yRes / 24 - 3));
-            gameState = fadingIn;
-            fadeTill = now + durFade;
          }
          break;
       case fadingIn:

@@ -172,7 +172,7 @@ void HighScoreList::complexityStats(void) {
       }
       fp << "numPassageCells: " << maze.numPassageCells << " of " << volume <<
          " (" << maze.w << "x" << maze.h << "x" << maze.d << "/" << maze.sparsity << "). Prediction: " << 
-         int(((maze.sparsity - 1) * 3) * (volume + 0.0) / (maze.sparsity * maze.sparsity * maze.sparsity)) << endl;
+         maze.estPassages() << endl;
    }
 }
 

@@ -319,9 +319,9 @@ void glCamera::GoTo(GLfloat nx, GLfloat ny, GLfloat nz, GLfloat npitch, GLfloat 
 void glCamera::StandBack(float w, float h, float d, float cellSize) {
    float m = max(w, max(h, d));
    float x = -1 - m * 0.3, y = h + m * 0.1, z = -1 - m * 0.3;
-   m_Position.x = x * cellSize;
+   m_Position.x = x * cellSize * 1.7;
    m_Position.y = y * cellSize;
-   m_Position.z = -z * cellSize;
+   m_Position.z = -z * cellSize * 1.7;
 
    // "look-at" point: midpoint of maze, but aim a little higher so we can see horizon
    float dx = (x - w*0.5);
