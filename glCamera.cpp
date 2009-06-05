@@ -11,6 +11,11 @@
 #define M_PI       3.14159265358979323846
 #endif // M_PI
 
+inline bool my_isnan(double x)
+{
+return x != x;
+} 
+
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -114,6 +119,11 @@ void glCamera::SetPerspective()
 	(void)collide(m_Position, m_DirectionVector);
 
 	// Translate to our new position.
+        if (my_isnan(m_Position.x) || my_isnan(m_Position.y) || my_isnan(m_Position.z)) {
+           errorMsg("Camera position invalid: <%0.2f %0.2f %0.2f>. Snapping to grid.\n", m_Position.x, m_Position.y, m_Position.z);
+           SnapToGrid();
+        }
+
 	glTranslatef(-m_Position.x, -m_Position.y, m_Position.z);
 
 	// glPrint("<%0.2f %0.2f %0.2f>", m_Position.x, m_Position.y, -m_Position.z);

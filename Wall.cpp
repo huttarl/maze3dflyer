@@ -106,7 +106,13 @@ void Wall::drawExit(int x, int y, int z, bool isEntrance) {
    glRotatef(isEntrance ? maze.exitRot : -maze.exitRot, 0.0f, 0.0f, 1.0f);
 
    // gluDisk(quadric, innerRadius, outerRadius, slices, loops)
-   gluDisk(diskQuadric, Maze3D::exitHoleRadius * 0.8, Maze3D::exitHoleRadius, 7, 3);
+   gluDisk(diskQuadric, Maze3D::exitHoleRadius * 0.8, Maze3D::exitHoleRadius, 13, 3);
+
+   // If there are prizes left, exit should be closed.
+   if (!isEntrance && maze.isExitLocked()) {
+      glRectf(-Maze3D::exitHoleRadius * 0.1, -Maze3D::exitHoleRadius * 0.9,
+         Maze3D::exitHoleRadius * 0.1, Maze3D::exitHoleRadius * 0.9);
+   }
 
    glPopMatrix();
 }

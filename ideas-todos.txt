@@ -2,6 +2,8 @@ Ideas and to-do's
 
 ('-' indicates not done; 'x' indicates done; '*' indicates important or urgent or extra cool/useful)
 
+  *- there is a bug such that somehow, I keep getting into a place where x y z are 1.#QNANO. That's when the viewscreen goes gray.
+     It can be fixed by pressing the space bar. But how is it happening?
  **- would be very cool to display the maze while building it.
    - would probably have to pass parameters to the drawing functions to treat incomplete data a little differently.
    - Draw "forbidden" cells as maybe wire-frame with diagon lines.
@@ -17,12 +19,18 @@ Ideas and to-do's
      next level add dog, next level egg; etc.
      x generated them
      x display them
+       x to debug: sometimes certain prizes are not displayed. Not sure why.
      - give them images and names - how to configure?
      - display images and names
      x have them 'taken' as user flies over them
-       - need more visual feedback
-     - maybe have exit disc with slash across it until all prizes taken. And even non-navigable!
-   - show in lower right corner, the set of prizes you've collected. Or at least the count of prizes remaining.
+       - need more visual feedback, sound
+     x maybe have exit disc with slash across it until all prizes taken. And even non-navigable!
+       - sound when exit unlocks
+       -* when you bump into locked exit, give message "Collect all globes to unlock exit." Use mainMsg buffer and mainMsgDL.
+          Also use mainMsg for "Solved in " msg, instead of using timeDL.
+   -* show in lower right corner, the set of prizes you've collected. Or at least the count of prizes remaining.
+   - need to keep a separate score list for prize-collecting mode... it takes much longer.
+     This is a more satisfying game though.
  x display route solution (e.g. as white line from entrance to exit, from center of each cube to the next)
    Having solution will help with implementation of auto-pilot.
    x compute and store solution as sequence of cells
