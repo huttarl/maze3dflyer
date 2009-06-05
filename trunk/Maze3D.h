@@ -52,6 +52,7 @@ public:
    Wall *exitWall, *entranceWall;
    Prize prizes[prizeMax];
    bool hitLockedExit;
+   bool isGenerating; // true while maze is being generated
 
    // Maze3D::Maze3D();
    Maze3D(int _w = 8, int _h = 8, int _d = 8, int _s = 3, int _b = 2);
@@ -67,11 +68,15 @@ public:
    inline bool isExitLocked() { return (prizes && nPrizesLeft > 0); }
 
    inline int volume() { return w * h * d; }
+   // estimate the number of passages that will be generated for a maze of this size and sparsity.
+   int estPassages() { return int((sparsity * 3 - 1) * (volume() + 0.0) / (sparsity * sparsity * sparsity)); }
 
-   void drawXEdge(int i, int j, int k);
-   void drawYEdge(int i, int j, int k);
-   void drawZEdge(int i, int j, int k);
+   void drawXEdge(int i, int j, int k, bool forbidden = false);
+   void drawYEdge(int i, int j, int k, bool forbidden = false);
+   void drawZEdge(int i, int j, int k, bool forbidden = false);
    void drawOutline(void);
+   void drawForbidden(void);
+   void drawQueue(void);
    void drawSolutionRoute(void);
    void drawPrizes(void);
    void drawCylinder(int x1, int y1, int z1, int x2, int y2, int z2);
@@ -80,6 +85,13 @@ public:
    void computeSolution(void);
 
    void addPrizes(void);
+
+   void static inline glvc(int x, int y, int z) { glVertex3f(x * cellSize, y * cellSize, z * cellSize); }
+
+
+   // queue of cells to be expanded from next
+   CellCoord *queue; // only populated during maze generation
+   int queueSize;
 
 private:
    int fillInDeadEnd(int x, int y, int z, CellCoord *route);
