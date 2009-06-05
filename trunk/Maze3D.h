@@ -51,6 +51,7 @@ public:
    // Pointers to the open "walls" at entrance and exit.
    Wall *exitWall, *entranceWall;
    Prize prizes[prizeMax];
+   bool hitLockedExit;
 
    // Maze3D::Maze3D();
    Maze3D(int _w = 8, int _h = 8, int _d = 8, int _s = 3, int _b = 2);
@@ -63,6 +64,7 @@ public:
    inline bool IsWall(Wall *wall) {
       return (wall == entranceWall || wall == exitWall || wall->state == Wall::CLOSED);
    }
+   inline bool isExitLocked() { return (prizes && nPrizesLeft > 0); }
 
    inline int volume() { return w * h * d; }
 

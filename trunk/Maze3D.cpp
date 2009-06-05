@@ -40,6 +40,7 @@ Maze3D::Maze3D(int _w, int _h, int _d, int _s, int _b) {
    zWalls = NULL;
    solutionRoute = NULL;
    nPrizes = 0; nPrizesLeft = 0;
+   hitLockedExit = false;
 }
 
 // setDims should be called only before SetupWorld().
@@ -366,46 +367,64 @@ void Maze3D::addPrizes() {
       int attempts = 0;
       do {
          ccTmp.placeRandomly();
-         debugMsg("placing prize %d at <%d %d %d>: ", i, ccTmp.x, ccTmp.y, ccTmp.z);
+//         debugMsg("placing prize %d at <%d %d %d>: ", i, ccTmp.x, ccTmp.y, ccTmp.z);
          if (!ccTmp.isCellPassage()) debugMsg("!ccTmp.isCellPassage()\n");
          else if (ccTmp == ccEntrance) debugMsg("ccTmp == ccEntrance\n");
          else if (ccTmp == ccExit) debugMsg("ccTmp == ccExit\n");
-         else if (cells[ccTmp.x][ccTmp.y][ccTmp.z].hasPrize) debugMsg("hasPrize\n");
+         else if (cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize != -1) debugMsg("has prize %d\n", cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize);
          else debugMsg("ok!\n");
          if (++attempts > 50) {
-            debugMsg("Too many attempts for prize %d; giving up.\n");
+            debugMsg("Too many attempts to place prize %d; giving up.\n");
             break; // this will exit only the do loop, and place the prize in an invalid spot.
          }
-      } while (!ccTmp.isCellPassage() || ccTmp == ccEntrance || ccTmp == ccExit || cells[ccTmp.x][ccTmp.y][ccTmp.z].hasPrize);
+      } while (!ccTmp.isCellPassage() || ccTmp == ccEntrance || ccTmp == ccExit || cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize != -1);
 
+      prizes[i].taken = false;
       prizes[i].where = ccTmp;
-      cells[ccTmp.x][ccTmp.y][ccTmp.z].hasPrize = true;
+      cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize = i;
    }
+
+   // debugging: are prizes[*].where really separate objects, as they should be? yes
+   //for (int i=0; i < nPrizes; i++)
+   //   debugMsg("prize %d at %d %d %d\n", i, prizes[i].where.x, prizes[i].where.y, prizes[i].where.z);
 
    return;
 }
+
+#ifdef DEBUGGING
+static int numTimes = 0;
+static const int maxNumTimes = 500;
+#endif // DEBUGGING
 
 // draw the prizes (that are not taken).
 void Maze3D::drawPrizes() {
    glLineWidth(1.0); // for outline. 1 is default anyway.
 
-   const float throbRate = 0.1, throbSize = 0.1;
+   const float throbRate = 0.1, throbSize = 0.05, baseRadius = 0.1;
 
+   glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT);
+   glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+#ifdef DEBUGGING
+   //numTimes++;
+   //if (numTimes < maxNumTimes)
+   //   debugMsg("Drawing prizes: \n");
+#endif // DEBUGGING
    for (int i=0; i < nPrizes; i++) {
       if (!prizes[i].taken) {
          CellCoord *cc = &(prizes[i].where);
-         // first check whether the prize was just taken.
-         if (!(cells[cc->x][cc->y][cc->z].hasPrize)) {
-            prizes[i].taken = true;
-            continue; // It was taken so don't draw it.
-         }
+#ifdef DEBUGGING
+         //if (numTimes < maxNumTimes)
+         //   debugMsg("prize %d at %d %d %d (%staken)\n", i, cc->x, cc->y, cc->z, prizes[i].taken ? "" : "not ");
+#endif // DEBUGGING
          glPushMatrix();
          glTranslatef((cc->x + 0.5) * maze.cellSize, (cc->y + 0.5) * maze.cellSize, (cc->z + 0.5) * maze.cellSize);
-         // spin
-         float animFactor = maze.exitRot + cc->x*10 + cc->y*10 + cc->z*10;
-         float radius = 0.15 * maze.cellSize * (1.0 + throbSize * sin(animFactor * throbRate));
-         glRotatef(animFactor, 0.0f, 0.0f, 1.0f);
-         glRotatef(animFactor, 0.0f, 1.0f, 0.0f);
+         // spin. Add in x y z so that prizes aren't all in phase with each other.
+         float animFactor = (maze.exitRot + cc->x*30 + cc->y*41 + cc->z*52) * 0.5;
+         float radius = baseRadius * maze.cellSize * (1.0 + throbSize * sin(animFactor * throbRate));
+         // vary the spin directions too, based on which cell we're in.
+         glRotatef((cc->x + cc->y) % 2 ? animFactor : -animFactor, 0.0f, 0.0f, 1.0f);
+         glRotatef((cc->x + cc->z) % 2 ? animFactor : -animFactor, 0.0f, 1.0f, 0.0f);
          // draw faces of sphere
          gluQuadricDrawStyle(sphereQuadric, GLU_FILL);
          glColor3f(1.0, 1.0, 1.0); // white
@@ -419,4 +438,6 @@ void Maze3D::drawPrizes() {
          glPopMatrix();
       }
    }
+
+   glPopAttrib();
 }

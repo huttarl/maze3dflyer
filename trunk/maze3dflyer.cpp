@@ -66,7 +66,7 @@ HGLRC		hRC=NULL;		// Permanent Rendering Context
 HWND		hWnd=NULL;		// Holds Our Window Handle
 HINSTANCE	hInstance;		// Holds The Instance Of The Application
 
-GLuint	helpDL, fpsDL, timeDL, statusDL, scoreListDL, facadeDL; // display list ID's
+GLuint	helpDL, fpsDL, timeDL, statusDL, scoreListDL, mainMsgDL, facadeDL; // display list ID's
 
 const float piover180 = 0.0174532925f;
 int xRes = 1024;
@@ -77,7 +77,7 @@ bool	keysDown[256];		// keys for which we have received down events (and no rele
 bool	keysStillDown[256];	// keys for which we have already processed inital down events (and no release)
 							// keysStillDown[] is the equivalent of what used to be mp, bp, etc.
 bool	active = true;		// Window Active Flag Set To TRUE By Default
-bool	fullscreen = false;	// Fullscreen Flag Set To Fullscreen Mode By Default
+bool	fullscreen = true;	// Fullscreen Flag Set To Fullscreen Mode By Default
 bool	blend = false;		// Blending ON/OFF
 bool	autopilotMode = false;		// autopilotMode on?
 bool	mouseGrab = true;		// mouse centering is on?
@@ -99,6 +99,8 @@ float   mouseTurnRate = 0.05f; // how fast to turn in response to mouse; default
 UINT	MouseX, MouseY;		// Coordinates for the mouse
 UINT	CenterX, CenterY;	// Coordinates for the center of the screen.
 
+
+
 Maze3D maze;
 HighScoreList highScoreList;
 
@@ -117,6 +119,10 @@ GLuint mazeTextures[numMazeTextures];	// Storage for texture indices
 const int numSkyTextures = 14;		// Max # sky textures (not all used)
 GLuint skyTextures[numSkyTextures];   // room for up, down, and up to 12 sideways directions
 GLuint effectTexture, splashTexture;
+
+// Use this to tell user "Collect all prizes to unlock exit." etc.
+char mainMsg[1024] = "Testing";              // central message to display, if any
+clock_t showMainMsgTill = 0;
 
 const int howLongShowSolved = 5; // for how many seconds do we display "SOLVED"?
 const int durFade = 1 * CLOCKS_PER_SEC; // how many ticks to fade out / fade in for new level?
@@ -349,7 +355,7 @@ void initCellsWalls(bool initVertices = true) {
          for (k=0; k <= maze.d; k++) {
             if (i < maze.w && j < maze.h && k < maze.d) {
                maze.cells[i][j][k].state = Cell::uninitialized;
-               maze.cells[i][j][k].hasPrize = false;
+               maze.cells[i][j][k].iPrize = -1;
             }
 	    // debugMsg("%d %d %d ", i, j, k); d(1);
 	    if (j < maze.h && k < maze.d) {	// xWall:					
@@ -454,6 +460,7 @@ void newMaze() {
    generateMaze();
    maze.computeSolution();
    if (prizes) maze.addPrizes();
+   maze.whenEntered = 0;
 }
 
 void nextLevel() {
@@ -497,11 +504,11 @@ void SetupWorld()
    // debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
 
    // Now set up our max values for the camera
-   Cam.m_MaxVelocity = maze.wallMargin * 0.2f; //TODO: make this changeable by keyboard
+   Cam.m_MaxVelocity = maze.wallMargin * (highSpeed ? 1.0 : 0.2);
+   Cam.m_MaxPitchRate = (highSpeed ? 5.0 : 2.0);
+   Cam.m_MaxHeadingRate = (highSpeed ? 5.0 : 2.0);
    Cam.m_MaxAccel = Cam.m_MaxVelocity * 0.5f;
-   Cam.m_MaxPitchRate = 3.0f;
    Cam.m_MaxPitch = 89.9f;
-   Cam.m_MaxHeadingRate = 3.0f;
    //Cam.m_PitchDegrees = 0.0f;
    //Cam.m_HeadingDegrees = 0.0f;
    //Cam.m_Position.x = 0.0f * maze.cellSize;
@@ -771,13 +778,11 @@ GLvoid createTextDLs(GLuint DL, bool variableSpaced, const char *fmt, ...)
    else if (DL == fpsDL) // position of framerate text
       x = xRes - 100, y = yRes - lineHeight/2 + 2;
          //TODO ###: could count lines and columns in text and adjust y to yRes - lineHeight * lines and x to xRes - 10 * columns.
-   else if (DL == timeDL) { // position of timer text
-      if (gameState == celebrating) {
+   else if (DL == timeDL) // position of timer text
+         x = 5, y = yRes - lineHeight/2 + 2;
+   else if (DL == mainMsgDL) { // main message 
          glutFont = GLUT_BITMAP_TIMES_ROMAN_24;
          x = xRes / 2 - 12*strlen(text)/2, y = yRes/2 - lineHeight*2;
-      }
-      else
-         x = 5, y = yRes - lineHeight/2 + 2;
    }
    else if (DL == scoreListDL) // position of score list
       x = xRes - 9*31 + 20, y = lineHeight; // was x = xRes / 2 - 9*14 + 10, y = yRes / 4;
@@ -976,6 +981,14 @@ void resetPerspectiveProjection() {
 void celebrateSolution() {
    maze.whenSolved = clock();
    maze.lastSolvedTime = maze.whenSolved - maze.whenEntered;
+
+   int minutes = maze.lastSolvedTime / (CLOCKS_PER_SEC * 60);
+   sprintf(mainMsg, "SOLVED in %d:%05.2f %s", minutes,
+      (maze.lastSolvedTime + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC,
+      maze.newBest ? "-- ** New best time! **" : "");
+   showMainMsgTill = clock() + (howLongShowSolved * CLOCKS_PER_SEC);
+
+   maze.whenEntered = 0;
    if (!showedSolutionThisLevel && highScoreList.addScore(maze)) {
       // if this is a new high score (low time), save the high score list.
       highScoreList.save();
@@ -1029,10 +1042,7 @@ void drawText()
    if (lastTime == 0) lastTime = now;
 
    if (maze.whenSolved && (now - maze.whenSolved < howLongShowSolved * CLOCKS_PER_SEC)) {
-      minutes = maze.lastSolvedTime / (CLOCKS_PER_SEC * 60);
-      sprintf(solvingStatus, "SOLVED in %d:%05.2f %s", minutes,
-         (maze.lastSolvedTime + 0.0 - (minutes * CLOCKS_PER_SEC * 60)) / CLOCKS_PER_SEC,
-         maze.newBest ? "-- ** New best time! **" : "");
+      ; // don't recreate solved message every time; moved this to point of solving.
    } else {
       if (maze.whenEntered) {
          minutes = (now - maze.whenEntered) / (CLOCKS_PER_SEC * 60);
@@ -1041,7 +1051,9 @@ void drawText()
       }
       else solvingStatus[0] = '\0';
    }
+
    createTextDLs(timeDL, true, solvingStatus);
+   createTextDLs(mainMsgDL, true, mainMsg);
 
    ++frames;
    // see http://bytes.com/forum/post832171-3.html regarding CLOCKS_PER_SEC and clock_t type.
@@ -1074,6 +1086,7 @@ void drawText()
    //TODO: scroll score list if too large
    glCallList(timeDL);
    if (showStatus) glCallList(statusDL);
+   if (mainMsg) glCallList(mainMsgDL);
 
    glPopMatrix();
    resetPerspectiveProjection();	
@@ -1131,18 +1144,19 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
    SetupWorld();
 
    // Create display lists for help and fps
-   helpDL = glGenLists(5);
+   helpDL = glGenLists(6);
    fpsDL = helpDL + 1;
    timeDL = fpsDL + 1;
    statusDL = timeDL + 1;
    scoreListDL = statusDL + 1;
+   mainMsgDL = scoreListDL + 1;
 
    // Initialize the help display list. The FPS DL is recreated every time FPS is calculated.
    createTextDLs(helpDL, true, helpText);
    createTextDLs(fpsDL, true, "FPS: unknown");
    createTextDLs(timeDL, true, "");
 
-   facadeDL = scoreListDL + 1;
+   facadeDL = mainMsgDL + 1;
    createFacadeDL(facadeDL);
 
    return TRUE;										// Initialization Went OK
@@ -1458,6 +1472,9 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
    if (gameState == celebrating) celebrationEffect();
    else if (gameState == fadingIn || gameState == fadingOut) fadingEffect();
 
+   if (mainMsg[0] && clock() > showMainMsgTill)
+      mainMsg[0] = '\0';
+
    drawText(); // draw any needed screen text, such as FPS
 
    firstTime = false; // debugging
@@ -1525,7 +1542,7 @@ BOOL CreateGLWindow(char* title, int width, int height, int bits, bool fullscree
 	WindowRect.top=(long)0;				// Set Top Value To 0
 	WindowRect.bottom=(long)height;		// Set Bottom Value To Requested Height
 
-	fullscreen=fullscreenflag;			// Set The Global Fullscreen Flag
+	fullscreen = fullscreenflag;			// Set The Global Fullscreen Flag
 
 	hInstance			= GetModuleHandle(NULL);				// Grab An Instance For Our Window
 	wc.style			= CS_HREDRAW | CS_VREDRAW | CS_OWNDC;	// Redraw On Size, And Own DC For Window.
@@ -1796,7 +1813,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 	MSG		msg;									// Windows Message Structure
 	BOOL	done=FALSE;								// Bool Variable To Exit Loop
 
-        fullscreen = FALSE;
+        fullscreen = false;
 
         LPWSTR *szArglist;
         int nArgs;
@@ -2087,6 +2104,13 @@ void CheckMouse(void)
 	SetCursorPos(CenterX, CenterY);
 }
 
+// Return true if points 1 and 2 are closer than r to each other.
+bool closerThan(float x1, float y1, float z1, float x2, float y2, float z2, float r) {
+   float dsq = (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) + (z1-z2)*(z1-z2);
+   debugMsg("dsq: %f\n");
+   return (dsq < r*r);
+}
+
 /* Return true iff moving from point p along vector v would collide with a wall.
  * Modify p to be p + v, adjusted to remove collision; thus we "slide" along a wall.
  * ##To do: maybe "friction" should then slow down the rest of v.
@@ -2097,7 +2121,7 @@ void CheckMouse(void)
  * "A wall" means a square unit of the plane where the wall state is CLOSED.
  * "A potential wall" means a square unit of the plane, regardless of its wall state.
  *
- * To debug: it is possible to go through walls if you head upward diagonally toward
+ * //### To debug: it is possible to go through walls if you head upward diagonally toward
  * just above a bottom corner of the maze.
  */
 bool collide(glPoint &p, glVector &v)
@@ -2124,40 +2148,52 @@ bool collide(glPoint &p, glVector &v)
               maze.hasFoundExit = false;
               celebrateSolution();
            }
-           maze.whenEntered = 0;
+           if (!prizes) maze.whenEntered = 0;
         }
         else if (qcc == maze.ccEntrance) {
-           maze.whenEntered = clock();
+           if (!prizes || !maze.whenEntered) maze.whenEntered = clock();
            maze.hasFoundExit = false;
         }
         else if (qcc == maze.ccExit && maze.whenEntered) {
            maze.hasFoundExit = true; // solved maze!
         }
 
-        if (qcc.isInBounds() && maze.cells[qcc.x][qcc.y][qcc.z].hasPrize) {
-            maze.cells[qcc.x][qcc.y][qcc.z].hasPrize = false;
-            maze.nPrizesLeft--;
-            debugMsg("Took prize at %d %d %d; %d left.\n",
-               qcc.x, qcc.y, qcc.z, maze.nPrizesLeft);
-            //## TODO: set prizes[...].taken = true;
-            //## TODO: update display?
+        if (qcc.isInBounds()) {
+           Cell *c = &(maze.cells[qcc.x][qcc.y][qcc.z]);
+           if (c->iPrize != -1
+              && closerThan(q.x, q.y, q.z, qcc.x * maze.cellSize + 0.5, qcc.y * maze.cellSize + 0.5,
+                  qcc.z * maze.cellSize + 0.5, 0.4)) {
+               maze.prizes[c->iPrize].taken = true;
+               c->iPrize = -1;
+               debugMsg("Took prize at %d %d %d; %d left.\n",
+                  qcc.x, qcc.y, qcc.z, maze.nPrizesLeft);
+               //## TODO: update HUD?
+               --maze.nPrizesLeft;
+               if (maze.nPrizesLeft > 0)
+                  sprintf(mainMsg, "%d prize%s left.", maze.nPrizesLeft, maze.nPrizesLeft > 1 ? "s" : "");
+               else
+                  sprintf(mainMsg, "Exit unlocked!");
+               showMainMsgTill = clock() + CLOCKS_PER_SEC * 2;
+           }
         }
 
 	// debugMsg("In collide(<%.2f %.2f %.2f>... ", q.x, q.y, q.z);
 
+        maze.hitLockedExit = false;
+        //###TODO: somewhere here test for maze.hitLockedExit
+        // and based on that, set copy to mainMsg "Collect all prizes to unlock exit."
+
 	// For each of the six possible walls:
 	// - test whether possible wall is within maze
-	//   and whether possible wall is a wall
+	//   and whether possible wall is a wall (CLOSED)
 	// - test if q is within wallMargin of wall
 	ncc.x = qcc.x - 1;
-	if (qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED
-		&& (q.x - (qcc.x * maze.cellSize) < maze.wallMargin)) {
+	if ((q.x - (qcc.x * maze.cellSize) < maze.wallMargin) && qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED) {
 		q.x = qcc.x * maze.cellSize + maze.wallMargin;
 		result = true;
 	} else {
 		ncc.x = qcc.x + 1;
-		if (qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED
-			&& (ncc.x * maze.cellSize) - q.x < maze.wallMargin) {
+		if ((ncc.x * maze.cellSize) - q.x < maze.wallMargin && qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED) {
 			q.x = ncc.x * maze.cellSize - maze.wallMargin;
 			result = true;
 		}
@@ -2165,14 +2201,12 @@ bool collide(glPoint &p, glVector &v)
 	ncc.x = qcc.x; // restore it
 
 	ncc.y = qcc.y - 1;
-	if (qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED
-		&& (q.y - (qcc.y * maze.cellSize) < maze.wallMargin)) {
+	if ((q.y - (qcc.y * maze.cellSize) < maze.wallMargin) && qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED) {
 		q.y = qcc.y * maze.cellSize + maze.wallMargin;
 		result = true;
 	} else {	
 		ncc.y = qcc.y + 1;
-		if (qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED
-			&& (ncc.y * maze.cellSize) - q.y < maze.wallMargin) {
+		if ((ncc.y * maze.cellSize) - q.y < maze.wallMargin && qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED) {
 			q.y = ncc.y * maze.cellSize - maze.wallMargin;
 			result = true;
 		}
@@ -2180,18 +2214,21 @@ bool collide(glPoint &p, glVector &v)
 	ncc.y = qcc.y; // restore it
 
 	ncc.z = qcc.z - 1;
-	if (qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED
-		&& (q.z - (qcc.z * maze.cellSize) < maze.wallMargin)) {
+	if ((q.z - (qcc.z * maze.cellSize) < maze.wallMargin) && qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED) {
 		q.z = qcc.z * maze.cellSize + maze.wallMargin;
 		result = true;
 	} else {	
 		ncc.z = qcc.z + 1;
-		if (qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED
-			&& (ncc.z * maze.cellSize) - q.z < maze.wallMargin) {
+		if ((ncc.z * maze.cellSize) - q.z < maze.wallMargin && qcc.getStateOfWallToSafe(&ncc) == Wall::CLOSED) {
 			q.z = ncc.z * maze.cellSize - maze.wallMargin;
 			result = true;
 		}
 	}
+
+        if (result && maze.hitLockedExit) {
+           strcpy(mainMsg, "Collect all prizes to unlock exit.");
+           showMainMsgTill = clock() + 5 * CLOCKS_PER_SEC;
+        }
 
 	// if (!result) debugMsg(" no collision.\n");
 	// Adjust position according to velocity, modified by collision.

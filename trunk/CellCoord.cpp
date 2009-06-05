@@ -214,7 +214,12 @@ Wall::WallState CellCoord::getStateOfWallToSafe(CellCoord *nc) {
 
 	Wall *w = findWallTo(nc);
 	//debugMsg(" wstate: %d ", w->state);
-	return w->state;
+        //### here: check for blocked exit and return CLOSED if so.
+        if (maze.isExitLocked() && w == maze.exitWall) {
+           maze.hitLockedExit = true; // give feedback, maybe sound.
+           return Wall::CLOSED;
+        }
+        else return w->state;
 }
 
 /* Randomly shuffle the order of CellCoords in an array.
