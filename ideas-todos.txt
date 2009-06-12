@@ -2,11 +2,16 @@ Ideas and to-do's
 
 ('-' indicates not done; 'x' indicates done; '*' indicates important or urgent or extra cool/useful)
 
+  *- about time to do another point release
+  - if texture/image folder ("Data") not found, try going up one directory
+    - this is hard to do portably. I took a stab but it didn't work.
   *- there is a bug such that somehow, I keep getting into a place where x y z are 1.#QNANO. That's when the viewscreen goes gray.
    - It can be fixed by pressing the space bar. But how is it happening?
    x I added code to try and detect the problem and SnapToGrid if x y or z are NaN.
        But haven't been able to reproduce the condition to test it. 
- **- would be very cool to display the maze while building it.
+       May be worth using boost libraries, since I will be needing to read directory contents for other desired features,
+       and there is no portable way to do that in std C++.
+ **x would be very cool to display the maze while building it.
    x would probably have to pass parameters to the drawing functions to treat incomplete data a little differently.
    x* Draw "forbidden" cells as maybe wire-frame with diagon lines.
    x Update after every new passage cell is added or new cell marked forbidden? I forget what the states are during building process.
@@ -17,9 +22,10 @@ Ideas and to-do's
      what about walls?
      and impassable cells? if we count passage cells + impassable cells we approach w*h*d
    x fix infinite-recursion bug: OneStep calls sequence > nextLevel > SetupWorld > newMaze > generateMaze > OneStep!
+   - would be interesting to add options and controls to adjust animGenDur, e.g. + and - keys (note +/= already ends level in dev mode)
  -q lighting: walls, and spheres, would look better if lighted based on normal;
    - maybe also based on whether they're inside or outside.
- - fix bug: 'H' mode is preserved from one level to another, at least on the HUD, but the speed is not.
+ x fix bug: 'H' mode is preserved from one level to another, at least on the HUD, but the speed is not.
    You have to toggle it off and on to get it to take effect.
      - may be better to have a multi-level speed setting, since normal speed is too fast for computer beginners like my kids.
  *- a different play mode:
@@ -56,9 +62,9 @@ Ideas and to-do's
      - let you zoom around but not into maze; maybe just rotate around at a fixed radius from center of maze.
        - arrows (or WASD) rotates you around sphere as if rotating the maze
      - exit mode by teleporting back to your saved position / orientation
-   -* another way to get some view of the outside from inside is to have some see-through walls.
+   x* another way to get some view of the outside from inside is to have some see-through walls.
      x Already implemented wall->seeThrough boolean.
-     - need to add rendering code to show a grill or sthg. Could even use the facade code?
+     x need to add rendering code to show a grill or sthg. Could even use the facade code?
  *x key, such as 'q', to toggle auto-forward mode. When this is on, it's like holding the 'w' key down.
    Like in Morrowind. This is canceled by pressing 'w', 's', or stop (space?)
  - detect when we're going to overflow max maze size.
@@ -335,7 +341,7 @@ Ideas and to-do's
  - put some objects into the maze, for interest?
    - maybe dynamic, framed pictures on the walls, fetched from internet (google image search?) or from a folder,
      changed periodically while playing
-   -* maybe some random walls are see-through! perhaps they're slatted, like blinds. This would give you some
+   x* maybe some random walls are see-through! perhaps they're slatted, like blinds. This would give you some
      idea of where you are in the maze.
  *x use floor/wall/ceiling textures
    x I'm loading carpet and brick; why isn't it showing brick? probably because of begin/end

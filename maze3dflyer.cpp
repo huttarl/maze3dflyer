@@ -491,7 +491,7 @@ void newMaze() {
 
    int estSteps = maze.estPassages() * 7; // for each passage cell, one cube + 7 walls, though many walls overlap
    animGenDelay = int(animGenDur * 1000000.0 / estSteps);
-   if (animGenDelay > 30000) animGenDelay = 30000;
+   if (animGenDelay > 50000) animGenDelay = 50000;
 
    generateMaze();
    maze.computeSolution();
@@ -618,7 +618,7 @@ bool loadMazeTexture(int i, char *filepath) {
    if (mazeTextures[i])
       return true;
    else {
-      debugMsg("Error loading image file %s: %s\n", filepath, SOIL_last_result());
+      errorMsg("Error loading image file %s: %s\n", filepath, SOIL_last_result());
       return false;
    }
 }
@@ -707,6 +707,8 @@ bool LoadGLTextures()                                    // Load images and conv
    bool status=FALSE;                               // status Indicator
    // load the image, check for errors; if it's not found, quit.
 
+   //### TODO: if "Data" folder doesn't exist but "../Data" does, go up one level.
+   
 #ifdef PROFILING
    // tried QueryPerformanceCounter... what a type mess! clock() is plenty of resolution for what I need.
    clock_t perfBefore = clock(), perfAfter;
@@ -718,6 +720,20 @@ bool LoadGLTextures()                                    // Load images and conv
 #endif
 
 #ifdef USE_JPG
+
+/* This doesn't work:
+#include <fstream>
+#include <direct.h>
+
+   fstream fin;
+   fin.open("Data/brickWall_tileable.jpg", ios::in);
+   if (fin.fail()) {
+      fin.open("../Data/brickWall_tileable.jpg", ios::in);
+      if (!fin.fail()) _chdir("..");
+   }
+   if (fin.is_open()) fin.close();
+*/
+
    status = loadMazeTexture(wall1, "Data/brickWall_tileable.jpg") && loadMazeTexture(ground, "Data/carpet-6716-2x2mir.jpg")
       && loadMazeTexture(wall2, "Data/cement-ao5b-gs.jpg") && loadMazeTexture(roof, "Data/roof1.jpg") && loadMazeTexture(portal, "Data/wood-planks-4227.jpg");
 #else
