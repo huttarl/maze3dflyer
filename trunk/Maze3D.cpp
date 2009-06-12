@@ -65,9 +65,13 @@ void Maze3D::incrementDims(int level) {
    // int v = volume();
    // Randomly pick an axis to increase, with the smallest axis being most likely.
    int whichAxis = rand() % (w*2 + h*2 + d*2);
-   if (whichAxis < w + h) d++;
-   else if (whichAxis < w + h + w + d) h++;
-   else w++;
+   if (whichAxis < w + h && d < dMax) d++;
+   else if (whichAxis < w + h + w + d && h < hMax) h++;
+   else if (w < wMax) w++;
+   else {
+      debugMsg("Maze dims maxed out.\n");
+      return;
+   }
 
    int minDim = min(w, min(h, d));
    if (minDim < 3) sparsity = 2;

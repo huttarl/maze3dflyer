@@ -4,6 +4,9 @@ A graphics demo that generates and displays random 3D mazes
 and lets them be navigated by keyboard control.
 In the future, a screensaver with autopilot is planned.
 
+The maze generation phase is animated. Blue outlines indicate the queue of cells from which the maze is to "grow".
+Red outlines indicate cells that are marked "forbidden" for growth because they are too close to other passages.
+
 
 To install from a zip archive:
 
