@@ -456,16 +456,23 @@ int Maze3D::fillInDeadEnd(int x, int y, int z, CellCoord *route) {
 
 extern int level;
 
+void Maze3D::addPrizeAt(CellCoord &cc) {
+   prizes[nPrizes].taken = false;
+   prizes[nPrizes].where = cc;
+   cells[cc.x][cc.y][cc.z].iPrize = nPrizes;
+   nPrizes++;
+}
+
 // Populate the maze with prize objects.
 void Maze3D::addPrizes() {
-   nPrizes = level;
-   if (nPrizes > prizeMax) nPrizes = prizeMax;
-   nPrizesLeft = nPrizes;
+   int goal = level;
+   if (goal > prizeMax) goal = prizeMax;
 
    CellCoord ccTmp(0,0,0);
 
-   for (int i=0; i < nPrizes; i++) {
+   for (int i = 0; i < goal; i++) {
       int attempts = 0;
+      bool validPlace = false;
       do {
          ccTmp.placeRandomly();
 //         debugMsg("placing prize %d at <%d %d %d>: ", i, ccTmp.x, ccTmp.y, ccTmp.z);
@@ -473,22 +480,29 @@ void Maze3D::addPrizes() {
          else if (ccTmp == ccEntrance) debugMsg("ccTmp == ccEntrance\n");
          else if (ccTmp == ccExit) debugMsg("ccTmp == ccExit\n");
          else if (cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize != -1) debugMsg("has prize %d\n", cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize);
-         else debugMsg("ok!\n");
-         if (++attempts > 50) {
-            debugMsg("Too many attempts to place prize %d; giving up.\n");
-            break; // this will exit only the do loop, and place the prize in an invalid spot.
+         else {
+            validPlace = true;
+            debugMsg("ok!\n");
          }
-      } while (!ccTmp.isCellPassage() || ccTmp == ccEntrance || ccTmp == ccExit || cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize != -1);
 
-      prizes[i].taken = false;
-      prizes[i].where = ccTmp;
-      cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize = i;
+         if (!validPlace && ++attempts > 150) {
+            debugMsg("Too many attempts to place prize %d; giving up.\n", i);
+            break; // this will exit only the do loop; don't place the prize in an invalid spot.
+         }
+      } while (!validPlace);
+
+      if (validPlace)
+         addPrizeAt(ccTmp);
+         //prizes[i].taken = false;
+         //prizes[i].where = ccTmp;
+         //cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize = i;
    }
 
    // debugging: are prizes[*].where really separate objects, as they should be? yes
    //for (int i=0; i < nPrizes; i++)
    //   debugMsg("prize %d at %d %d %d\n", i, prizes[i].where.x, prizes[i].where.y, prizes[i].where.z);
 
+   nPrizesLeft = nPrizes;
    return;
 }
 

@@ -188,6 +188,13 @@ void CellCoord::standOutside(Wall *w) {
 	//	cx, cy, cz, pitch, heading);
 	Cam.GoTo(cx, cy, -cz, pitch, heading);
 	Cam.AccelForward(-keyAccelRate*2);
+
+        maze.hasFoundExit = false;
+}
+
+/* Return true if cc is adjacent to this cc. */ // and the wall in between is w. -- wanted to implement that but not worth it?
+bool CellCoord::isNextTo(CellCoord &cc) {
+   return (abs(cc.x - x) + abs(cc.y - y) + abs(cc.z - z) == 1);
 }
 
 /* Get state of wall between this and nc.

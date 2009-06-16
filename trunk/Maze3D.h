@@ -84,6 +84,7 @@ public:
    int solutionRouteLen;
    void computeSolution(void);
 
+   void addPrizeAt(CellCoord &cc);
    void addPrizes(void);
 
    void static inline glvc(int x, int y, int z) { glVertex3f(x * cellSize, y * cellSize, z * cellSize); }

@@ -2,10 +2,13 @@ Ideas and to-do's
 
 ('-' indicates not done; 'x' indicates done; '*' indicates important or urgent or extra cool/useful)
 
-  *- about time to do another point release
+  x* Fix bug: if you're in the maze and you get to the exit but it's locked, then you press Home to go outside the entrance,
+    you've "solved"!
+  *x about time to do another point release, 1.5
   - if texture/image folder ("Data") not found, try going up one directory
     - this is hard to do portably. I took a stab but it didn't work.
-  *- there is a bug such that somehow, I keep getting into a place where x y z are 1.#QNANO. That's when the viewscreen goes gray.
+    - tried using Boost but couldn't link to or build the correct form of library.
+  - there is a bug such that somehow, I keep getting into a place where x y z are 1.#QNANO. That's when the viewscreen goes gray.
    - It can be fixed by pressing the space bar. But how is it happening?
    x I added code to try and detect the problem and SnapToGrid if x y or z are NaN.
        But haven't been able to reproduce the condition to test it. 
@@ -29,6 +32,9 @@ Ideas and to-do's
    You have to toggle it off and on to get it to take effect.
      - may be better to have a multi-level speed setting, since normal speed is too fast for computer beginners like my kids.
  *- a different play mode:
+   x* bug: sometimes prizes are generated outside of maze. Usually in sparse mazes. I think this is because it iterates a certain number of times and then gives up.
+     Fix: either try harder, or don't place prizes when giving up; or use a smarter algorithm.
+     In generateMaze(), place mazes when establishing passage cells.
    - between entrance and exit, you have to pick up all the objects in the maze... e.g. apple, ball, and carrot;
      next level add dog, next level egg; etc.
      x generated them
