@@ -97,6 +97,9 @@ public:
         // Return true if this cc's coords are inside the maze bounds.
         bool isInBounds(void);
 
+        // Return true if cc is adjacent to this.
+        bool isNextTo(CellCoord &cc);
+
         // Set coordinates to random value within bounding box of maze.
         void placeRandomly(void);
 

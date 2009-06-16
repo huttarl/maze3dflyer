@@ -186,6 +186,9 @@
 				RelativePath=".\maze3dflyer.h">
 			</File>
 			<File
+				RelativePath=".\Prize.h">
+			</File>
+			<File
 				RelativePath=".\SOIL.h">
 			</File>
 			<File

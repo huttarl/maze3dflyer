@@ -311,6 +311,8 @@ void generateMaze()
 					if (passable) {
 						currCell->setStateOfWallTo(ni, Wall::OPEN);
 						ni->setCellState(Cell::passage);
+                                                // Here might be a good spot to place prizes, if we want to change our approach.
+                                                // if (rand() % prize scarcity == 0) place prize;
 
 						maze.queue[maze.queueSize++] = *ni;
 						addedNeighbors++;
@@ -327,7 +329,7 @@ void generateMaze()
 
                         // animate the drawing
                         if (animateGeneration) {
-                           (void)OneStep(&msg); //### TODO: should check if user quit program
+                           (void)OneStep(&msg); //### TODO: should check if user quit program; also check for quitting animation
                            usleep(animGenDelay);
                         }
 
@@ -348,6 +350,8 @@ void generateMaze()
 	// Add an entrance and exit.
 	maze.entranceWall = maze.ccEntrance.openAWall();
 	maze.exitWall = maze.ccExit.openAWall();
+
+        // If we place prizes during maze gen, here (re)move any prize that may be in entrance or exit cell
 
 	// Old method, works only for a filled maze (sparsity <= 1):
 	//// We could place these anywhere, but putting them on opposite corners minimizes
@@ -1195,6 +1199,7 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
 
    level = 1;
    maze.setDims(2, 2, 2, 2);
+   // maze.setDims(28, 28, 28, 5);
    SetupWorld();
 
    // Create display lists for help and fps
@@ -2172,7 +2177,7 @@ void CheckMouse(void)
 // Return true if points 1 and 2 are closer than r to each other.
 bool closerThan(float x1, float y1, float z1, float x2, float y2, float z2, float r) {
    float dsq = (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) + (z1-z2)*(z1-z2);
-   debugMsg("dsq: %f\n");
+   // debugMsg("dsq: %f\n");
    return (dsq < r*r);
 }
 
@@ -2209,7 +2214,7 @@ bool collide(glPoint &p, glVector &v)
 	ncc = qcc;
 
         if (!qcc.isCellPassageSafe()) {
-           if (maze.hasFoundExit) {
+           if (maze.hasFoundExit && qcc.isNextTo(maze.ccExit)) {
               maze.hasFoundExit = false;
               celebrateSolution();
            }
