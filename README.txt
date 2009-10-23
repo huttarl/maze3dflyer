@@ -35,7 +35,7 @@ Home/End: go to maze entrance/exit
 
 Shift: toggle higher speed
 M or mouse-click: toggle mouse grab*
-R: toggle display of solution (disables recording new best scores)
+R: toggle display of solution route (disables recording new best scores)
   Length of dashes increases toward exit.
 T: toggle display of framerate
 L: toggle display of best score list (arrow shows current maze config)
@@ -47,10 +47,11 @@ Space: stop and snap camera position/orientation to grid
 F7: toggle "developer" mode*
 N: generate new maze of same dimensions
 C: toggle collision checking (allow passing through walls or not)*
-+: 'solve' current level instantly
+J: 'solve' current level instantly
 K: sKip current level (fast)
-???: show path from entrance to exit (not yet implemented)
 P: toggle autopilot (not yet implemented)*
++/- adjust key sensitivity
+[/] adjust mouse sensitivity
 
 *The state of these settings is reflected in a status bar
 along bottom of window.
