@@ -61,6 +61,8 @@ int DrawGLScene(GLvoid);
 void CheckMouse(void);
 bool CheckKeys(void);
 void sequence(void);
+void adjustKeySensitivity(float factor);
+void adjustMouseSensitivity(float factor);
 
 glCamera Cam;				// Our Camera for moving around and setting prespective
 							// on things.
@@ -103,7 +105,7 @@ int     animGenDelay = 20000;   // microseconds between animation steps
 float	keyTurnRate = 2.0f; // how fast to turn in response to keys
 float	keyAccelRate = 0.1f; // how fast to accelerate in response to keys
 float	keyMoveRate = 0.1f;  // how fast to move in response to keys
-float   mouseTurnRate = 0.05f; // how fast to turn in response to mouse; default 0.2f
+float   mouseTurnRate = 0.2f; // how fast to turn in response to mouse; default 0.2f
 
 // Used for mouse steering
 UINT	MouseX, MouseY;		// Coordinates for the mouse
@@ -154,12 +156,14 @@ Home/End: jump to maze entrance/exit\n\
 N: new maze\n\
 M or left-click: toggle mouse grab\n\
 Shift: toggle high speed\n\
-R: toggle display of solution (disables recording new best scores)\n\
+R: toggle display of solution route (disables recording new best scores)\n\
 T: toggle frames-per-second display\n\
 L: toggle display of best score list (arrow shows current maze config)\n\
 U: toggle status bar display\n\
 G: toggle maze outline\n\
-F1: toggle full-screen mode";
+F1: toggle full-screen mode\n\
++/- adjust key sensitivity\n\
+[/] adjust mouse sensitivity";
 
 
 
@@ -2094,34 +2098,21 @@ bool CheckKeys(void) {
         // F7: toggle developer mode
         checkKey(VK_F7, (developerMode = !developerMode));
 
-        checkKey(VK_OEM_PLUS, (developerMode && ((maze.hasFoundExit = false), celebrateSolution(), (maze.whenEntered = 0))));
+        // J: 'solve' without going through maze
+        checkKey('J', (developerMode && ((maze.hasFoundExit = false), celebrateSolution(), (maze.whenEntered = 0))));
 
+        // K: immediately start next level
         checkKey('K', (developerMode && (nextLevel(), (gameState = fadingIn), (fadeTill = clock() + durFade),
            (showScores && (createTextDLs(scoreListDL, false, highScoreList.toString(maze, yRes / 24 - 3)), 0)))));
 
+        // +/-: adjust key sensitivity
+        checkKey(VK_OEM_PLUS, adjustKeySensitivity(1.333));
+        checkKey(VK_OEM_MINUS, adjustKeySensitivity(0.75));
+        // [/]: adjust mouse sensitivity
+        checkKey(VK_OEM_4, adjustMouseSensitivity(0.75)); // [
+        checkKey(VK_OEM_6, adjustMouseSensitivity(1.333)); // ]
+        
 	/* Old code from lesson10:
-	if (keysDown[VK_UP])
-	{
-
-		xpos -= (float)sin(yheading*piover180) * 0.05f;
-		zpos -= (float)cos(yheading*piover180) * 0.05f;
-	}
-
-	if (keysDown[VK_DOWN])
-	{
-		xpos += (float)sin(yheading*piover180) * 0.05f;
-		zpos += (float)cos(yheading*piover180) * 0.05f;
-	}
-
-	if (keysDown[VK_RIGHT])
-	{
-		yheading -= 1.0f;
-	}
-
-	if (keysDown[VK_LEFT])
-	{
-		yheading += 1.0f;	
-	}
 
 	if (keysDown[VK_PRIOR])
 	{
@@ -2379,3 +2370,20 @@ void sequence(void) {
    return;
 }
 
+// adjust key response rates by the given factor
+void adjustKeySensitivity(float factor) {
+   keyAccelRate *= factor;
+   keyTurnRate *= factor;
+   keyMoveRate *= factor;
+   debugMsg("keyTurnRate: %f\n", keyTurnRate);
+   //#TODO: visual feedback
+   return;
+}
+
+// adjust key response rates by the given factor
+void adjustMouseSensitivity(float factor) {
+   mouseTurnRate *= factor;
+   debugMsg("mouseTurnRate: %f\n", mouseTurnRate);
+   //#TODO: visual feedback
+   return;
+}
