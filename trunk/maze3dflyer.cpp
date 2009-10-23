@@ -523,6 +523,7 @@ void freeResources() {
    delete ap;
 }
 
+// Setup world for a new level.
 void SetupWorld()
 {
    maze.exitRot = 0.0f;
@@ -616,9 +617,11 @@ bool loadMazeTexture(int i, char *filepath) {
 //   free(bitmap->data);			
 //   free(bitmap);
 
+   debugMsg("Loading from id %d, image %s: ", mazeTextures[i], filepath);
    mazeTextures[i] = SOIL_load_OGL_texture(filepath, SOIL_LOAD_AUTO,
 		mazeTextures[i],
                 SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS);
+   debugMsg(" texture id is now %d\n", mazeTextures[i]);
    if (mazeTextures[i])
       return true;
    else {
@@ -679,12 +682,21 @@ bool loadSkyTextures() {
    //static char path[1024];
    //TODO: read filenames from .ini file if stellarium landscape
 #ifdef USE_JPG
+#ifdef HAVE_MOONLIGHT
+   return loadSkyTexture(0, "Data/skybox/moonlight_down.jpg") &&
+      loadSkyTexture(1, "Data/skybox/moonlight_up.jpg") &&
+      loadSkyTexture(2, "Data/skybox/moonlight_north.jpg") &&
+      loadSkyTexture(3, "Data/skybox/moonlight_east.jpg") &&
+      loadSkyTexture(4, "Data/skybox/moonlight_south.jpg") &&
+      loadSkyTexture(5, "Data/skybox/moonlight_west.jpg");
+#else // HAVE_MOONLIGHT
    return loadSkyTexture(0, "Data/skybox/sahara_down.jpg") &&
       loadSkyTexture(1, "Data/skybox/sahara_up.jpg") &&
       loadSkyTexture(2, "Data/skybox/sahara_north.jpg") &&
       loadSkyTexture(3, "Data/skybox/sahara_east.jpg") &&
       loadSkyTexture(4, "Data/skybox/sahara_south.jpg") &&
       loadSkyTexture(5, "Data/skybox/sahara_west.jpg");
+#endif // HAVE_MOONLIGHT
 #else
    return loadSkyTexture(0, "Data/skybox/sahara_down.bmp") &&
       loadSkyTexture(1, "Data/skybox/sahara_up.bmp") &&
@@ -1152,12 +1164,10 @@ void drawText()
 
 GLvoid ReSizeGLScene(GLsizei width, GLsizei height)		// Resize And Initialize The GL Window
 {
-	if (height==0)										// Prevent A Divide By Zero By
-	{
-		height=1;										// Making Height Equal One
-	}
+	if (height == 0)										// Prevent A Divide By Zero
+            height=1;										
 
-	glViewport(0,0,width,height);						// Reset The Current Viewport
+	glViewport(0, 0, width, height);						// Reset The Current Viewport
 
 	glMatrixMode(GL_PROJECTION);						// Select The Projection Matrix
 	glLoadIdentity();									// Reset The Projection Matrix
@@ -1169,14 +1179,16 @@ GLvoid ReSizeGLScene(GLsizei width, GLsizei height)		// Resize And Initialize Th
 	glLoadIdentity();									// Reset The Modelview Matrix
 }
 
+// Called whenever we create a window, including if we toggle fullscreen mode.
 int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
 {
+   static bool firstGLInit = true;
+
    //if (!LoadGLTextures())								// Jump To Texture Loading Routine
    //{
    //	return FALSE;									// If Texture Didn't Load Return FALSE
    //}
    // moved this into the draw loop to make startup seem faster.
-   genGLTextures();
 
    glEnable(GL_TEXTURE_2D);							// Enable Texture Mapping
    glBlendFunc(GL_SRC_ALPHA, GL_ONE);					// Set The Blending Function For Translucency
@@ -1189,33 +1201,43 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
    glLineWidth(1.0); // for outline. 1 is default anyway.
    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
 
-   sphereQuadric = gluNewQuadric();			// create a quadric object for cylinders, discs, etc.
-   diskQuadric = gluNewQuadric();
-   cylQuadric = gluNewQuadric();
-   gluQuadricNormals(sphereQuadric, GLU_SMOOTH);	// Create Smooth Normals ( NEW )
-   gluQuadricNormals(diskQuadric, GLU_SMOOTH);
-   gluQuadricNormals(cylQuadric, GLU_SMOOTH);
-   // gluQuadricTexture(quadric, GL_TRUE);		// Create Texture Coords ( NEW )
+   if (firstGLInit) {
+      genGLTextures(); // do we want this when we toggle fullscreen?
 
-   level = 1;
-   maze.setDims(2, 2, 2, 2);
-   // maze.setDims(28, 28, 28, 5);
-   SetupWorld();
+      sphereQuadric = gluNewQuadric();			// create a quadric object for cylinders, discs, etc.
+      diskQuadric = gluNewQuadric();
+      cylQuadric = gluNewQuadric();
+      gluQuadricNormals(sphereQuadric, GLU_SMOOTH);	// Create Smooth Normals ( NEW )
+      gluQuadricNormals(diskQuadric, GLU_SMOOTH);
+      gluQuadricNormals(cylQuadric, GLU_SMOOTH);
+      // gluQuadricTexture(quadric, GL_TRUE);		// Create Texture Coords ( NEW )
 
-   // Create display lists for help and fps
-   helpDL = glGenLists(6);
-   fpsDL = helpDL + 1;
-   timeDL = fpsDL + 1;
-   statusDL = timeDL + 1;
-   scoreListDL = statusDL + 1;
-   mainMsgDL = scoreListDL + 1;
+      // Create display lists for help and fps
+      helpDL = glGenLists(6);
+      fpsDL = helpDL + 1;
+      timeDL = fpsDL + 1;
+      statusDL = timeDL + 1;
+      scoreListDL = statusDL + 1;
+      mainMsgDL = scoreListDL + 1;
 
-   // Initialize the help display list. The FPS DL is recreated every time FPS is calculated.
-   createTextDLs(helpDL, true, helpText);
-   createTextDLs(fpsDL, true, "FPS: unknown");
-   createTextDLs(timeDL, true, "");
+      // Initialize the help display list. The FPS DL is recreated every time FPS is calculated.
+      createTextDLs(helpDL, true, helpText);
+      createTextDLs(fpsDL, true, "FPS: unknown");
+      createTextDLs(timeDL, true, "");
 
-   facadeDL = mainMsgDL + 1;
+      facadeDL = mainMsgDL + 1;
+
+      // Stuff to initialize for new game, not for new window, nor new level
+      // Is there another place to put this?
+
+      level = 1;
+      maze.setDims(2, 2, 2, 2);
+      // maze.setDims(28, 28, 28, 5);
+      SetupWorld();
+
+      firstGLInit = false;
+   }
+
    createFacadeDL(facadeDL);
 
    return TRUE;										// Initialization Went OK
@@ -2119,9 +2141,11 @@ bool CheckKeys(void) {
 		fullscreen = !fullscreen;				// Toggle Fullscreen / Windowed Mode
 		// Recreate Our OpenGL Window
 		if (!CreateGLWindow(title, xRes, yRes, 16, fullscreen))
-		{
 			return true;						// Quit If Window Was Not Created
-		}
+                // recreate all textures
+                // This should deallocate the old ones if present.
+                if (!LoadGLTextures())
+                   debugMsg("LoadGLTextures() returned zero");
 	}
 	return false;
 }

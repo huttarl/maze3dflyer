@@ -482,7 +482,7 @@ void Maze3D::addPrizes() {
          else if (cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize != -1) debugMsg("has prize %d\n", cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize);
          else {
             validPlace = true;
-            debugMsg("ok!\n");
+//          debugMsg("ok!\n");
          }
 
          if (!validPlace && ++attempts > 150) {
