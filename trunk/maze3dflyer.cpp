@@ -2106,11 +2106,11 @@ bool CheckKeys(void) {
            (showScores && (createTextDLs(scoreListDL, false, highScoreList.toString(maze, yRes / 24 - 3)), 0)))));
 
         // +/-: adjust key sensitivity
-        checkKey(VK_OEM_PLUS, adjustKeySensitivity(1.333));
-        checkKey(VK_OEM_MINUS, adjustKeySensitivity(0.75));
+        checkKey(VK_OEM_PLUS, adjustKeySensitivity(1.333334f));
+        checkKey(VK_OEM_MINUS, adjustKeySensitivity(0.75f));
         // [/]: adjust mouse sensitivity
-        checkKey(VK_OEM_4, adjustMouseSensitivity(0.75)); // [
-        checkKey(VK_OEM_6, adjustMouseSensitivity(1.333)); // ]
+        checkKey(VK_OEM_4, adjustMouseSensitivity(0.75f)); // '['  I'm sure that key code is very portable. :-p
+        checkKey(VK_OEM_6, adjustMouseSensitivity(1.333334f)); // ']'
         
 	/* Old code from lesson10:
 
@@ -2255,9 +2255,9 @@ bool collide(glPoint &p, glVector &v)
                //## TODO: update HUD?
                --maze.nPrizesLeft;
                if (maze.nPrizesLeft > 0)
-                  sprintf(mainMsg, "%d prize%s left.", maze.nPrizesLeft, maze.nPrizesLeft > 1 ? "s" : "");
+                  sprintf(mainMsg, "Grabbed prize %d of %d.", maze.nPrizes - maze.nPrizesLeft, maze.nPrizes);
                else
-                  sprintf(mainMsg, "Exit unlocked!");
+                  sprintf(mainMsg, "Found all prizes. Exit unlocked!");
                showMainMsgTill = clock() + CLOCKS_PER_SEC * 2;
            }
         }
@@ -2376,7 +2376,11 @@ void adjustKeySensitivity(float factor) {
    keyTurnRate *= factor;
    keyMoveRate *= factor;
    debugMsg("keyTurnRate: %f\n", keyTurnRate);
-   //#TODO: visual feedback
+   // Turn this into an easily-understood figure to display.
+   float displayRate = log(keyTurnRate) / log(factor);
+   if (factor < 1.0) displayRate = -displayRate;
+   sprintf(mainMsg, "Key sensitivity: %d", (int)floor(displayRate));
+   showMainMsgTill = clock() + CLOCKS_PER_SEC * 1;
    return;
 }
 
@@ -2384,6 +2388,10 @@ void adjustKeySensitivity(float factor) {
 void adjustMouseSensitivity(float factor) {
    mouseTurnRate *= factor;
    debugMsg("mouseTurnRate: %f\n", mouseTurnRate);
-   //#TODO: visual feedback
+   // Turn this into an easily-understood figure to display.
+   float displayRate = log(mouseTurnRate) / log(factor);
+   if (factor < 1.0) displayRate = -displayRate;
+   sprintf(mainMsg, "Mouse sensitivity: %d", (int)floor(displayRate) + 10);
+   showMainMsgTill = clock() + CLOCKS_PER_SEC * 1;
    return;
 }
