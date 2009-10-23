@@ -1,7 +1,7 @@
 Ideas and to-do's
 
 ('-' indicates not done; 'x' indicates done; '*' indicates important or urgent or extra cool/useful)
-
+  - would be cool to use Hazel Whorley's Egyptian textures for wall/floor/etc.
   x* Fix bug: if you're in the maze and you get to the exit but it's locked, then you press Home to go outside the entrance,
     you've "solved"!
   *x about time to do another point release, 1.5
