@@ -184,13 +184,20 @@ void errorMsg(const char *str, ...)
  char buf[2048];
 
  va_list ptr;
- va_start(ptr,str);
- vsprintf(buf,str,ptr);
+ va_start(ptr, str);
+ vsprintf(buf, str, ptr);
 
  OutputDebugString("\nError: ");
  OutputDebugString(buf);
 }
 
+void setMainMsg(float secs, const char *str, ...) {
+   va_list ptr;
+   va_start(ptr, str);
+   vsprintf(mainMsg, str, ptr);
+
+   showMainMsgTill = clock() + (clock_t)(CLOCKS_PER_SEC * secs);
+}
 
 // class instance counters
 static int nic = 0; // CellCoord
@@ -551,7 +558,7 @@ void SetupWorld()
    // debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
 
    // Now set up our max values for the camera
-   Cam.m_MaxVelocity = maze.wallMargin * (highSpeed ? 1.0 : 0.2);
+   Cam.m_MaxVelocity = maze.wallMargin * (highSpeed ? 1.0 : 0.3);
    Cam.m_MaxPitchRate = (highSpeed ? 5.0 : 2.0);
    Cam.m_MaxHeadingRate = (highSpeed ? 5.0 : 2.0);
    Cam.m_MaxAccel = Cam.m_MaxVelocity * 0.5f;
@@ -621,11 +628,11 @@ bool loadMazeTexture(int i, char *filepath) {
 //   free(bitmap->data);			
 //   free(bitmap);
 
-   debugMsg("Loading from id %d, image %s: ", mazeTextures[i], filepath);
+   // debugMsg("Loading from id %d, image %s: ", mazeTextures[i], filepath);
    mazeTextures[i] = SOIL_load_OGL_texture(filepath, SOIL_LOAD_AUTO,
 		mazeTextures[i],
                 SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS);
-   debugMsg(" texture id is now %d\n", mazeTextures[i]);
+   // debugMsg(" texture id is now %d\n", mazeTextures[i]);
    if (mazeTextures[i])
       return true;
    else {
@@ -1980,6 +1987,22 @@ int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 		keysStillDown[key] = false; \
 	}
 
+void checkFwdKeys(void) {
+   // Process WSAD (movement) keys. (Allow for dvorak layout too.)
+   if(keysDown['W'] || keysDown[VK_OEM_COMMA]) {
+      Cam.AccelForward(keyAccelRate);	
+      autoForward = false;
+   } else if(keysDown['S'] || keysDown['O']) {
+      Cam.AccelForward(-keyAccelRate);
+      autoForward = false;
+   } else if (autoForward) Cam.AccelForward(keyAccelRate);
+}
+
+void checkSideKeys(void) {
+   if(keysDown['A']) Cam.AccelSideways(-keyAccelRate);
+   if(keysDown['D'] || keysDown['E']) Cam.AccelSideways(keyAccelRate);
+}
+
 
 //TODO: factor out common code, particularly for keys that are not held down, such as SPACE.
 // Make an array appKeys[] = { VK_SPACE, 'F', ... }
@@ -2001,19 +2024,20 @@ bool CheckKeys(void) {
 	// Cam.m_ForwardVelocity = 0.0f;
 	// Cam.m_SidewaysVelocity = 0.0f;
 
-	// Process WSAD (movement) keys. (Allow for dvorak layout too.)
-        if(keysDown['W'] || keysDown[VK_OEM_COMMA]) {
-           Cam.AccelForward(keyAccelRate);	
-           autoForward = false;
-        } else if(keysDown['S'] || keysDown['O']) {
-           Cam.AccelForward(-keyAccelRate);
-           autoForward = false;
-        } else if (autoForward) Cam.AccelForward(keyAccelRate);
+        // if (keysDown[VK_OEM_COMMA] || keysDown['E'])
+        //     debugMsg("comma: %c; E: %c;\n", keysDown[VK_OEM_COMMA] ? 'y' : 'n', keysDown['E'] ? 'y' : 'n');
 
-	if(keysDown['A']) Cam.AccelSideways(-keyAccelRate);
-	if(keysDown['D'] || keysDown['E']) Cam.AccelSideways(keyAccelRate);
+        // Whichever componenent of velocity is greater, give the other one first chance of taking up the slack
+        // provided by friction, so that one doesn't completely squeeze out the other.
+        if (abs(Cam.m_ForwardVelocity) > abs(Cam.m_SidewaysVelocity)) {
+            checkSideKeys();
+            checkFwdKeys();
+        } else {
+            checkFwdKeys();
+            checkSideKeys();
+        }
 
-	// reset position / heading / pitch to the beginning of the maze.
+         // reset position / heading / pitch to the beginning of the maze.
         checkKey(VK_HOME, maze.ccEntrance.standOutside(maze.entranceWall));
 
 	// reset position / heading / pitch to the end of the maze.
@@ -2250,8 +2274,8 @@ bool collide(glPoint &p, glVector &v)
                   qcc.z * maze.cellSize + 0.5, 0.4)) {
                maze.prizes[c->iPrize].taken = true;
                c->iPrize = -1;
-               debugMsg("Took prize at %d %d %d; %d left.\n",
-                  qcc.x, qcc.y, qcc.z, maze.nPrizesLeft);
+               // debugMsg("Took prize at %d %d %d; %d left.\n",
+               //    qcc.x, qcc.y, qcc.z, maze.nPrizesLeft);
                //## TODO: update HUD?
                --maze.nPrizesLeft;
                if (maze.nPrizesLeft > 0)
@@ -2375,23 +2399,21 @@ void adjustKeySensitivity(float factor) {
    keyAccelRate *= factor;
    keyTurnRate *= factor;
    keyMoveRate *= factor;
-   debugMsg("keyTurnRate: %f\n", keyTurnRate);
+   // debugMsg("keyTurnRate: %f\n", keyTurnRate);
    // Turn this into an easily-understood figure to display.
    float displayRate = log(keyTurnRate) / log(factor);
    if (factor < 1.0) displayRate = -displayRate;
-   sprintf(mainMsg, "Key sensitivity: %d", (int)floor(displayRate));
-   showMainMsgTill = clock() + CLOCKS_PER_SEC * 1;
+   setMainMsg(1.0, "Key sensitivity: %d", (int)floor(displayRate));
    return;
 }
 
 // adjust key response rates by the given factor
 void adjustMouseSensitivity(float factor) {
    mouseTurnRate *= factor;
-   debugMsg("mouseTurnRate: %f\n", mouseTurnRate);
+   // debugMsg("mouseTurnRate: %f\n", mouseTurnRate);
    // Turn this into an easily-understood figure to display.
    float displayRate = log(mouseTurnRate) / log(factor);
    if (factor < 1.0) displayRate = -displayRate;
-   sprintf(mainMsg, "Mouse sensitivity: %d", (int)floor(displayRate) + 10);
-   showMainMsgTill = clock() + CLOCKS_PER_SEC * 1;
+   setMainMsg(1.0, "Mouse sensitivity: %d", (int)floor(displayRate) + 10);
    return;
 }

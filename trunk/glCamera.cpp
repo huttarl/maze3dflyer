@@ -65,6 +65,7 @@ void glCamera::ApplyFriction()
         if (m_ForwardVelocity < 0.003f && m_ForwardVelocity > -0.003f) m_ForwardVelocity = 0.0f;
         m_SidewaysVelocity *= frictionRoot;
         if (m_SidewaysVelocity < 0.003f && m_SidewaysVelocity > -0.003f) m_SidewaysVelocity = 0.0f;
+        // debugMsg("Friction: fwd -> %2.2f, sidew -> %2.2f\n", m_ForwardVelocity, m_SidewaysVelocity);
         //if (firstFew < 100) //debugging
         //   debugMsg("fps: %0.3f, froot: %0.3f; oldFV: %0.3f; new: %0.3f\n", m_framerate, frictionRoot, oldFV, m_ForwardVelocity);
 }
@@ -106,6 +107,8 @@ void glCamera::SetPerspective()
 	rightVector.j = 0;
 	rightVector.i = m_DirectionVector.k;
 	rightVector.k = -m_DirectionVector.i;
+
+        // setMainMsg(1.0, "fwd vel: %0.2f, side vel: %0.2f", m_ForwardVelocity, m_SidewaysVelocity); //debugging
 
 	// Scale the direction by our velocity.
 	m_DirectionVector *= m_ForwardVelocity;
@@ -243,7 +246,7 @@ void glCamera::ChangeHeading(GLfloat degrees)
 // To do: if m_MaxVelocity is really max overall velocity, we need to take into account sideways velocity.
 void glCamera::AccelForward(GLfloat accel)
 {
-	//debugMsg("%2.2f + AccelForward(%2.2f): ", m_ForwardVelocity, accel);
+	// debugMsg("%2.2f + AccelForward(%2.2f): ", m_ForwardVelocity, accel);
 	GLfloat nv, mfv2; // temp new velocity values
         // adjust acceleration amount based on framerate.
         accel = accel * m_framerateAdjust;
@@ -253,8 +256,11 @@ void glCamera::AccelForward(GLfloat accel)
 
 	nv = m_ForwardVelocity + accel;
 	mfv2 = m_MaxVelocity * m_MaxVelocity - m_SidewaysVelocity * m_SidewaysVelocity; // max forward velocity squared
-	if (nv * nv > mfv2) // too high
+        if (nv * nv > mfv2) { // too high
+                // debugMsg("  adjusted forward velocity down due to max, from %0.2f to ", nv);
 		nv = (nv > 0 ? sqrt(mfv2) : -sqrt(mfv2));
+                // debugMsg("%0.2f\n", nv);
+        }
 
 	m_ForwardVelocity = nv;
 	//debugMsg("= %2.2f\n", m_ForwardVelocity);
@@ -262,6 +268,7 @@ void glCamera::AccelForward(GLfloat accel)
 
 void glCamera::AccelSideways(GLfloat accel)
 {
+	// debugMsg("%2.2f + AccelSideways(%2.2f): ", m_SidewaysVelocity, accel);
 	GLfloat nv, msv2; // temp new velocity values
         // adjust acceleration amount based on framerate.
         accel = accel * m_framerateAdjust;
@@ -271,8 +278,11 @@ void glCamera::AccelSideways(GLfloat accel)
 
 	nv = m_SidewaysVelocity + accel;
 	msv2 = m_MaxVelocity * m_MaxVelocity - m_ForwardVelocity * m_ForwardVelocity; // max Sideways velocity squared
-	if (nv * nv > msv2) // too high
+        if (nv * nv > msv2) { // too high
+                // debugMsg("  adjusted sideways velocity down due to max, from %0.2f to ", nv);
 		nv = (nv > 0 ? sqrt(msv2) : -sqrt(msv2));
+                // debugMsg("%0.2f\n", nv);
+        }
 
 	m_SidewaysVelocity = nv;
 }

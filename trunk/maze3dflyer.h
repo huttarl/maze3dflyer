@@ -8,6 +8,7 @@
 
 extern void debugMsg(const char *str, ...);
 extern void errorMsg(const char *str, ...);
+extern void setMainMsg(float secs, const char *str, ...);
 
 extern glCamera Cam;				
 extern float	keyTurnRate; // how fast to turn in response to keys
