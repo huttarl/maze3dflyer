@@ -86,7 +86,7 @@ bool	keysDown[256];		// keys for which we have received down events (and no rele
 bool	keysStillDown[256];	// keys for which we have already processed inital down events (and no release)
 							// keysStillDown[] is the equivalent of what used to be mp, bp, etc.
 bool	active = true;		// Window Active Flag Set To TRUE By Default
-bool	fullscreen = true;	// Fullscreen Flag Set To Fullscreen Mode By Default
+bool	fullscreen = false;	// Fullscreen Flag Set To Fullscreen Mode By Default
 bool	blend = false;		// Blending ON/OFF
 bool	autopilotMode = false;		// autopilotMode on?
 bool	mouseGrab = true;		// mouse centering is on?
@@ -789,10 +789,10 @@ bool LoadGLTextures()                                    // Load images and conv
 
    // test:
    debugMsg("Loading from id %d, image %s: ", pictureTexture, "Data/Mona_Lisa.jpg");
-   status = SOIL_load_OGL_texture("Data/Mona_Lisa-02.jpg", SOIL_LOAD_AUTO,
+   if(!SOIL_load_OGL_texture("Data/Mona_Lisa.jpg", SOIL_LOAD_AUTO,
 		pictureTexture,
-                SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS) ? true : false;
-   debugMsg("Texture load status: %d\n", status);
+                SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS))
+      debugMsg("Texture load status: false\n");
 
 #ifdef PROFILING
    //if (!QueryPerformanceCounter((LARGE_INTEGER *)&perfAfter))
