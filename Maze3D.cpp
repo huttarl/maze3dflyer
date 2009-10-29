@@ -40,6 +40,7 @@ Maze3D::Maze3D(int _w, int _h, int _d, int _s, int _b) {
    zWalls = NULL;
    solutionRoute = NULL;
    nPrizes = 0; nPrizesLeft = 0;
+   nPictures = 0;
    hitLockedExit = isGenerating = false;
 }
 
@@ -476,10 +477,10 @@ void Maze3D::addPrizes() {
       do {
          ccTmp.placeRandomly();
 //         debugMsg("placing prize %d at <%d %d %d>: ", i, ccTmp.x, ccTmp.y, ccTmp.z);
-         if (!ccTmp.isCellPassage()) debugMsg("!ccTmp.isCellPassage()\n");
-         else if (ccTmp == ccEntrance) debugMsg("ccTmp == ccEntrance\n");
-         else if (ccTmp == ccExit) debugMsg("ccTmp == ccExit\n");
-         else if (cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize != -1) debugMsg("has prize %d\n", cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize);
+         if (!ccTmp.isCellPassage()) ; // debugMsg(" !ccTmp.isCellPassage()\n");
+         else if (ccTmp == ccEntrance) ; // debugMsg(" ccTmp == ccEntrance\n");
+         else if (ccTmp == ccExit) ; // debugMsg(" ccTmp == ccExit\n");
+         else if (cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize != -1) ; // debugMsg(" already has prize %d\n", cells[ccTmp.x][ccTmp.y][ccTmp.z].iPrize);
          else {
             validPlace = true;
 //          debugMsg("ok!\n");
@@ -503,6 +504,64 @@ void Maze3D::addPrizes() {
    //   debugMsg("prize %d at %d %d %d\n", i, prizes[i].where.x, prizes[i].where.y, prizes[i].where.z);
 
    nPrizesLeft = nPrizes;
+   return;
+}
+
+void Maze3D::addPictureAt(CellCoord &cc, Wall *w, char dir) {
+   Picture *p = &pictures[nPictures];
+   p->where = cc;
+   p->wall = w;
+   p->textureId = pictureTexture;
+   p->dir = dir;
+   p->setupVertices();
+
+   cells[cc.x][cc.y][cc.z].picture = p;
+   nPictures++;
+}
+
+// Populate the maze with prize objects.
+void Maze3D::addPictures() {
+   int goal = numPassageCells / pictureRarity;
+   if (goal > pictureMax) goal = pictureMax;
+   debugMsg("picture goal: %d\n", goal);
+
+   CellCoord ccTmp(0,0,0), nc(0,0,0);
+
+   for (int i = 0; i < goal; i++) {
+      int attempts = 0;
+      bool validPlace = false;
+      Wall *wall;
+      do {
+         ccTmp.placeRandomly();
+//         debugMsg("placing prize %d at <%d %d %d>: ", i, ccTmp.x, ccTmp.y, ccTmp.z);
+         if (!ccTmp.isCellPassage()) ; // debugMsg("picture: !ccTmp.isCellPassage()\n");
+         else if (ccTmp == ccEntrance) ; // debugMsg("picture: ccTmp == ccEntrance\n");
+         else if (ccTmp == ccExit) ; // debugMsg("picture: ccTmp == ccExit\n");
+         else if (cells[ccTmp.x][ccTmp.y][ccTmp.z].picture) ; // debugMsg("has a picture already\n");
+         else {
+            nc = ccTmp;
+            nc.x++; //##TODO: randomize direction, or better, try all four (six) in random order
+            wall = ccTmp.findWallTo(&nc);
+            if (wall->state == Wall::CLOSED && !wall->seeThrough) {
+               validPlace = true;
+               debugMsg("picture: ok!\n");
+            }
+         }
+
+         if (!validPlace && ++attempts > 150) {
+            debugMsg("Too many attempts to place picture %d; giving up.\n", i);
+            break; // this will exit only the do loop; don't place the picture in an invalid spot.
+         }
+      } while (!validPlace);
+
+      if (validPlace)
+         addPictureAt(ccTmp, wall, 'x');
+   }
+
+   // debugging: are pictures[*].where really separate objects, as they should be? yes
+   //for (int i=0; i < nPictures; i++)
+   //   debugMsg("picture %d at %d %d %d\n", i, pictures[i].where.x, pictures[i].where.y, pictures[i].where.z);
+
    return;
 }
 
@@ -552,6 +611,19 @@ void Maze3D::drawPrizes() {
          gluSphere(sphereQuadric, radius, 9, 9);
          glPopMatrix();
       }
+   }
+
+   glPopAttrib();
+}
+
+// draw wall pictures
+void Maze3D::drawPictures() {
+
+   glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT);
+   glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+   for (int i=0; i < nPictures; i++) {
+      pictures[i].draw();
    }
 
    glPopAttrib();

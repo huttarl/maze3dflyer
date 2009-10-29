@@ -118,6 +118,16 @@ Ideas and to-do's
    esp. those that aren't otherwise visible.
    For now, prob just letters or words. Later, icons for booleans?
    Also show wxdxh/s, and num of passage cells. (Maybe time to beat?)
+ - fun: paintings on the walls.
+ - bread crumbs
+   - maybe automatic (1 per cell, 3 per cell??)
+     - could turn on/off
+   - ability gained after a certain level?
+   - display as small, rotating cubes
+     - or, mute the colors of the walls? scales better, but harder drawing?
+     - or display as small, oriented line segments? (better performance)
+   - limited # of crumbs; old ones disappear?
+   - crumbs fade with age! (age in terms of crumbs dropped since, not in terms of seconds)
  **x have a slower speed setting for when you're navigating the maze. E.g. SHIFT to toggle speeds.
    This would affect keyAccel? no, MaxVelocity.
  - In 2.0... have a more urgent mode (maybe just one of multiple modes) where you have no choice

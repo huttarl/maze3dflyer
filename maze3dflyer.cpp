@@ -95,8 +95,9 @@ bool	showHelp = true;		// show help text
 bool    autoForward = false;    // keep moving forward without holding down 'w'
 bool    drawOutline = true, showSolutionRoute = false, showedSolutionThisLevel = false;
 bool    highSpeed = false;      // high-speed mode
-bool    flipTextures = false;   // exchange sky and maze textures
+bool    flipTextures = true;   // exchange sky and maze textures
 bool    prizes = true;          // have prizes in the maze
+int     pictureRarity = 10;  // one picture per pictureRarity rooms
 bool    animateGeneration = true; // show the maze while generating it?
 int     animGenDur = 5;         // total duration (seconds) for maze gen animation
 int     animGenDelay = 20000;   // microseconds between animation steps
@@ -130,7 +131,7 @@ const int numMazeTextures = (roof - ground + 1);		// Max # maze textures (not co
 GLuint mazeTextures[numMazeTextures];	// Storage for texture indices
 const int numSkyTextures = 14;		// Max # sky textures (not all used)
 GLuint skyTextures[numSkyTextures];   // room for up, down, and up to 12 sideways directions
-GLuint effectTexture, splashTexture;
+GLuint pictureTexture, effectTexture, splashTexture;
 
 // Use this to tell user "Collect all prizes to unlock exit." etc.
 char mainMsg[1024] = "Testing";              // central message to display, if any
@@ -500,7 +501,8 @@ void initCellsWalls(bool initVertices = true) {
 
 void newMaze() {
    initCellsWalls(false);
-   maze.nPrizes = maze.nPrizesLeft = 0; // needed for animating generation of maze without old prizes lying around
+   maze.nPrizes = maze.nPrizesLeft = 0; // needed for animating generation of maze without old prizes/pictures lying around
+   maze.nPictures = 0;
 
    maze.isGenerating = true;
 
@@ -513,6 +515,8 @@ void newMaze() {
    maze.isGenerating = false;
 
    if (prizes) maze.addPrizes();
+   maze.addPictures();
+
    maze.whenEntered = 0;
 }
 
@@ -579,6 +583,10 @@ void SetupWorld()
 
    memset((void *)keysDown, 0, sizeof(keysDown));
    memset((void *)keysStillDown, 0, sizeof(keysStillDown));
+
+   flipTextures = (level > 5 && !flipTextures && (rand() % 10) == 1);
+   //##debugging: flipTextures = true;
+      
    return;
 }
 
@@ -725,13 +733,14 @@ void genGLTextures()
    glGenTextures(numMazeTextures, mazeTextures); // allocate textures for maze walls/floor/ceiling
    glGenTextures(numSkyTextures, skyTextures); // allocate textures for sky
 
+   glGenTextures(1, &pictureTexture);        // allocate textures for wall pictures
    glGenTextures(1, &effectTexture);          // allocate texture for screen effects
    glGenTextures(1, &splashTexture);          // allocate texture for splash image
 }
 
 bool LoadGLTextures()                                    // Load images and convert to textures
 {
-   bool status=FALSE;                               // status Indicator
+   bool status = FALSE;                               // status Indicator
    // load the image, check for errors; if it's not found, quit.
 
    //### TODO: if "Data" folder doesn't exist but "../Data" does, go up one level.
@@ -777,6 +786,13 @@ bool LoadGLTextures()                                    // Load images and conv
 #endif
 
    loadSkyTextures(); // don't complain if this fails; sky textures are a big download.
+
+   // test:
+   debugMsg("Loading from id %d, image %s: ", pictureTexture, "Data/Mona_Lisa.jpg");
+   status = SOIL_load_OGL_texture("Data/Mona_Lisa-02.jpg", SOIL_LOAD_AUTO,
+		pictureTexture,
+                SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS) ? true : false;
+   debugMsg("Texture load status: %d\n", status);
 
 #ifdef PROFILING
    //if (!QueryPerformanceCounter((LARGE_INTEGER *)&perfAfter))
@@ -1254,7 +1270,38 @@ int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
    return TRUE;										// Initialization Went OK
 }
 
-#define skyTex(i) (flipTextures ? mazeTextures[i] : skyTextures[i])
+// Remap sky and ground textures for weird flip mode.
+GLuint skyTex(int i) {
+   if (flipTextures) {
+      switch(i) {
+         case 0: return mazeTextures[ground];
+         case 1: return mazeTextures[roof];
+         case 2: return mazeTextures[wall2];
+         case 3: return mazeTextures[wall1];
+         case 4: return mazeTextures[wall2];
+         case 5: return mazeTextures[wall1];
+         default: errorMsg("unknown sky texture %d in skyTex()\n", i);
+      }
+   }
+   return skyTextures[i];
+}
+
+// Remap sky and ground textures for weird flip mode.
+GLuint mazeTex(int i) {
+   if (flipTextures) {
+      switch(i) {
+         case ground: return skyTextures[0];
+         case roof: return skyTextures[1];
+         case wall2: return skyTextures[2];
+         case wall1: return skyTextures[3];
+            //oops!
+         // case wall2: return mazeTextures[4];
+         // case wall1: return mazeTextures[5];
+         default: errorMsg("unknown sky texture %d in skyTex()\n", i);
+      }
+   }
+   return mazeTextures[i];
+}
 
 // draw the sky box. Thanks to:
 //  http://sidvind.com/wiki/Skybox_tutorial, http://gpwiki.org/index.php/Sky_Box
@@ -1468,7 +1515,7 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
    // debugMsg("zWalls[0][0][0].state = %d\n", maze.zWalls[0][0][0].state);
 
    // wall1 texture: xWalls
-   glBindTexture(GL_TEXTURE_2D, mazeTextures[wall1]);
+   glBindTexture(GL_TEXTURE_2D, mazeTex(wall1));
 
 #ifdef DEBUGGING
    //// cylinders for z-axis identification
@@ -1491,7 +1538,7 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
    glEnd(); // GL_QUADS
 
    // wall2 panel texture: zWalls
-   glBindTexture(GL_TEXTURE_2D, mazeTextures[wall2]);
+   glBindTexture(GL_TEXTURE_2D, mazeTex(wall2));
 
    // Process quads
    glBegin(GL_QUADS);
@@ -1510,7 +1557,7 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
    glEnd();
 
    // ground texture
-   glBindTexture(GL_TEXTURE_2D, mazeTextures[ground]);
+   glBindTexture(GL_TEXTURE_2D, mazeTex(ground));
    // Process quads
    glBegin(GL_QUADS);
 
@@ -1529,7 +1576,7 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
    glEnd();
 
    // roof/ceiling texture
-   glBindTexture(GL_TEXTURE_2D, mazeTextures[roof]);
+   glBindTexture(GL_TEXTURE_2D, mazeTex(roof));
    // glColor3f(1.0f, 0.5f, 0.5f); // temp for debugging
    //if (firstTime) {
    //	debugMsg("Binding roof texture at %d\n", roof);
@@ -1559,6 +1606,7 @@ int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
    }
    if (showSolutionRoute) maze.drawSolutionRoute();
    if (prizes && maze.nPrizesLeft > 0) maze.drawPrizes();
+   if (maze.nPictures > 0) maze.drawPictures();
 
    // display entrance/exit (may mess up rot/transf matrix)
    if (maze.entranceWall) maze.ccEntrance.drawExit(maze.entranceWall, true);

@@ -17,6 +17,7 @@ typedef struct tagQUAD
 	Vertex vertices[4];
 } Quad;
 
+class Picture;
 
 class Wall {
 public:
