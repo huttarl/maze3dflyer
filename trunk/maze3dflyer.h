@@ -14,7 +14,8 @@ extern glCamera Cam;
 extern float	keyTurnRate; // how fast to turn in response to keys
 extern float	keyAccelRate; // how fast to accelerate in response to keys
 extern float	keyMoveRate;  // how fast to move in response to keys
-
+extern int      pictureRarity;
+extern GLuint   pictureTexture;
 extern GLuint mazeTextures[]; // texture indexes ("names")
 extern GLuint facadeDL; // needed by Wall.cpp
 

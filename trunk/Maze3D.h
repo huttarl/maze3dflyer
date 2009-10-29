@@ -7,13 +7,15 @@
 #include "CellCoord.h"
 #include "Wall.h"
 #include "Prize.h"
+#include "Picture.h"
 
 class Maze3D {
 public:
    const static int wMax = 30, hMax = 30, dMax = 30;	// This is necessary because C++ doesn't do fully dynamic
 										          // multidimensional arrays. I've been spoiled by Java.
    const static int prizeMax = 30; // max # of prizes
-   int nPrizes, nPrizesLeft;
+   const static int pictureMax = 30; // max # of pictures
+   int nPrizes, nPrizesLeft, nPictures;
 
    // The following probably belong in a Maze class.
    int w, h, d;			// width (x) of maze in cells
@@ -51,6 +53,7 @@ public:
    // Pointers to the open "walls" at entrance and exit.
    Wall *exitWall, *entranceWall;
    Prize prizes[prizeMax];
+   Picture pictures[pictureMax];
    bool hitLockedExit;
    bool isGenerating; // true while maze is being generated
 
@@ -79,6 +82,7 @@ public:
    void drawQueue(void);
    void drawSolutionRoute(void);
    void drawPrizes(void);
+   void drawPictures(void);
    void drawCylinder(int x1, int y1, int z1, int x2, int y2, int z2);
 
    int solutionRouteLen;
@@ -86,6 +90,8 @@ public:
 
    void addPrizeAt(CellCoord &cc);
    void addPrizes(void);
+   void addPictureAt(CellCoord &cc, Wall *w, char dir);
+   void addPictures(void);
 
    void static inline glvc(int x, int y, int z) { glVertex3f(x * cellSize, y * cellSize, z * cellSize); }
 

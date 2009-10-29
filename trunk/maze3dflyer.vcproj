@@ -148,6 +148,9 @@
 				RelativePath=".\maze3dflyer.cpp">
 			</File>
 			<File
+				RelativePath=".\Picture.cpp">
+			</File>
+			<File
 				RelativePath=".\Wall.cpp">
 			</File>
 		</Filter>
@@ -184,6 +187,9 @@
 			</File>
 			<File
 				RelativePath=".\maze3dflyer.h">
+			</File>
+			<File
+				RelativePath=".\Picture.h">
 			</File>
 			<File
 				RelativePath=".\Prize.h">

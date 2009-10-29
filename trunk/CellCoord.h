@@ -3,6 +3,8 @@
 
 #include <math.h>
 
+class Cell;
+
 #include "Cell.h"
 #include "Wall.h"
 #include "glPoint.h"
