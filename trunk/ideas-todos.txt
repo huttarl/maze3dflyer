@@ -110,6 +110,12 @@ Ideas and to-do's
    and fly away, letting maze recede in view (or more of maze come into view)
    The complication here is avoiding collisions with maze parts. But if we face the very center of the maze, not
    the exit, we're unlikely to hit maze parts.
+   Another way to avoid the collision issue is to zoom out the camera *but not the 'ship'*.
+   Maybe even show a simple ship at the location of what is currently called the camera.
+   Perhaps disable key/mouse ship control.
+   Do the reverse when starting a maze: start with a zoomed-out view, with 'ship' visible before entrance, then swoop in?
+   No, user probably wants to get overview of maze first.
+   
 
    
  x test flash when new time - text centered right?
@@ -280,12 +286,13 @@ Ideas and to-do's
    - investigate OpenGL optimizations, like
      - display lists for like-textured quads
      - Vertex Arrays / Vertex Buffer Objects (http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=45)
-	 - culling (all our faces are currently double-facing, so we can't cull bwd-facing polygons... do we need/want to change that?)
-	   maybe cull hidden polygons... that's complicated.
+	 - culling (all our faces [except pictures and facets of prizes and facade] are currently visible from both sides,
+		so we can't cull bwd-facing polygons... do we need/want to change that?)
+	   Maybe cull occluded polygons... that's complicated.
 
  * better moving around:
    x arrow keys for turning
-   - maybe a bonk sound on collision. :-) (tactile feedback... otherwise it's not very obvious)
+   -* maybe a bonk sound on collision. :-) (tactile feedback... otherwise it's not very obvious)
    - need a stop key? (not so much, with speed decay.) let space do double duty?
    x* WASD keys for moving (fwd/bwd/strafe)
    x maybe a key to release mouse-grab

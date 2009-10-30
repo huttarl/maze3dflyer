@@ -90,7 +90,7 @@ enum
 	SOIL_FLAG_DDS_LOAD_DIRECT: will load DDS files directly without _ANY_ additional processing
 	SOIL_FLAG_NTSC_SAFE_RGB: clamps RGB components to the range [16,235]
 	SOIL_FLAG_CoCg_Y: Google YCoCg; RGB=>CoYCg, RGBA=>CoCgAY
-	SOIL_FLAG_TEXTURE_RECTANGLE: uses ARB_texture_rectangle ; pixel indexed & no repeat or MIPmaps or cubemaps
+	SOIL_FLAG_TEXTURE_RECTANGE: uses ARB_texture_rectangle ; pixel indexed & no repeat or MIPmaps or cubemaps
 **/
 enum
 {
@@ -425,6 +425,11 @@ const char*
 		void
 	);
 
+/**
+	These variables hold the width and height (in pixels) of the last
+	successful image load.
+**/
+extern int SOIL_image_width, SOIL_image_height;
 
 #ifdef __cplusplus
 }

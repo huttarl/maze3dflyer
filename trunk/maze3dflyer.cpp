@@ -40,6 +40,7 @@
 #include "maze3dflyer.h"
 #include "Wall.h"
 #include "Maze3D.h"
+#include "Image.h"
 #include "CellCoord.h"
 #include "Autopilot.h"
 #include "HighScoreList.h"
@@ -131,6 +132,10 @@ const int numMazeTextures = (roof - ground + 1);		// Max # maze textures (not co
 GLuint mazeTextures[numMazeTextures];	// Storage for texture indices
 const int numSkyTextures = 14;		// Max # sky textures (not all used)
 GLuint skyTextures[numSkyTextures];   // room for up, down, and up to 12 sideways directions
+const int numImageTextures = 10;
+GLuint imageTextures[numImageTextures];
+Image images[numImageTextures];
+
 GLuint pictureTexture, effectTexture, splashTexture;
 
 // Use this to tell user "Collect all prizes to unlock exit." etc.
@@ -636,7 +641,7 @@ bool loadMazeTexture(int i, char *filepath) {
 //   free(bitmap->data);			
 //   free(bitmap);
 
-   // debugMsg("Loading from id %d, image %s: ", mazeTextures[i], filepath);
+   // debugMsg("Loading from id %d, file %s: ", mazeTextures[i], filepath);
    mazeTextures[i] = SOIL_load_OGL_texture(filepath, SOIL_LOAD_AUTO,
 		mazeTextures[i],
                 SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS);
@@ -733,7 +738,7 @@ void genGLTextures()
    glGenTextures(numMazeTextures, mazeTextures); // allocate textures for maze walls/floor/ceiling
    glGenTextures(numSkyTextures, skyTextures); // allocate textures for sky
 
-   glGenTextures(1, &pictureTexture);        // allocate textures for wall pictures
+   glGenTextures(numImageTextures, imageTextures);        // allocate textures for wall pictures
    glGenTextures(1, &effectTexture);          // allocate texture for screen effects
    glGenTextures(1, &splashTexture);          // allocate texture for splash image
 }
@@ -788,11 +793,15 @@ bool LoadGLTextures()                                    // Load images and conv
    loadSkyTextures(); // don't complain if this fails; sky textures are a big download.
 
    // test:
-   debugMsg("Loading from id %d, image %s: ", pictureTexture, "Data/Mona_Lisa.jpg");
-   if(!SOIL_load_OGL_texture("Data/pictures/Mona_Lisa.jpg", SOIL_LOAD_AUTO,
-		pictureTexture,
-                SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS))
+   debugMsg("Loading from id %d, file %s: ", imageTextures[0], "Data/Mona_Lisa.jpg");
+   imageTextures[0] = SOIL_load_OGL_texture("Data/pictures/Mona_Lisa.jpg", SOIL_LOAD_AUTO,
+		imageTextures[0],
+                SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS);
+   images[0].init(imageTextures[0], 100, 100);
+   if (!imageTextures[0])
       debugMsg("Texture load status: false\n");
+   else
+      debugMsg("Texture size: %d x %d\n", SOIL_image_width, SOIL_image_height);
 
 #ifdef PROFILING
    //if (!QueryPerformanceCounter((LARGE_INTEGER *)&perfAfter))

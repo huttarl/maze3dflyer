@@ -17,6 +17,9 @@ extern float	keyMoveRate;  // how fast to move in response to keys
 extern int      pictureRarity;
 extern GLuint   pictureTexture;
 extern GLuint mazeTextures[]; // texture indexes ("names")
+class Image;
+extern Image images[];
+
 extern GLuint facadeDL; // needed by Wall.cpp
 
 typedef enum { ground, wall1, wall2, portal, roof } Material;

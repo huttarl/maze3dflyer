@@ -507,11 +507,11 @@ void Maze3D::addPrizes() {
    return;
 }
 
-void Maze3D::addPictureAt(CellCoord &cc, Wall *w, char dir) {
+void Maze3D::addPictureAt(CellCoord &cc, Wall *w, char dir, Image *image) {
    Picture *p = &pictures[nPictures];
    p->where = cc;
    p->wall = w;
-   p->textureId = pictureTexture;
+   p->image = image;
    p->dir = dir;
    p->setupVertices();
 
@@ -554,8 +554,9 @@ void Maze3D::addPictures() {
          }
       } while (!validPlace);
 
+      //##TODO: pick an image and direction at random
       if (validPlace)
-         addPictureAt(ccTmp, wall, 'x');
+         addPictureAt(ccTmp, wall, 'x', &images[0]);
    }
 
    // debugging: are pictures[*].where really separate objects, as they should be? yes
