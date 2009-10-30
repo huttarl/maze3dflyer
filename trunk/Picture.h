@@ -7,6 +7,7 @@ typedef unsigned int GLuint;
 #include "CellCoord.h"
 #include "Wall.h"
 
+// An instance of an image hung on a wall somewhere.
 class Picture {
 public:
    CellCoord where;
