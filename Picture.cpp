@@ -30,9 +30,9 @@ void Picture::draw(void) {
 }
 
 void Picture::setupVertices(void) {
-   GLfloat ep = 0.0001; // epsilon
+   GLfloat ep = 0.001; // epsilon
 
-   //##TODO generalize to all dirs
+   //##TODO generalize to all directions
 
    // Copy all vertex coords for starters; then change some.
    quad = wall->quad;
@@ -44,10 +44,12 @@ void Picture::setupVertices(void) {
       // wv = &(wall->quad.vertices[i]);
       pv->x -= ep;
    }
+
+   float top = 0.9f, bottom = 0.3f, side = 0.25f;
    // set bottom and top of picture
-   quad.vertices[0].y = quad.vertices[1].y = (where.y + 0.3) * Maze3D::cellSize;
-   quad.vertices[2].y = quad.vertices[3].y = (where.y + 0.9) * Maze3D::cellSize;
+   quad.vertices[0].y = quad.vertices[1].y = (where.y + bottom) * Maze3D::cellSize;
+   quad.vertices[2].y = quad.vertices[3].y = (where.y + top) * Maze3D::cellSize;
    // sides
-   quad.vertices[0].z = quad.vertices[3].z = (where.z + 0.25) * Maze3D::cellSize;
-   quad.vertices[1].z = quad.vertices[2].z = (where.z + 0.75) * Maze3D::cellSize;
+   quad.vertices[0].z = quad.vertices[3].z = (where.z + side) * Maze3D::cellSize;
+   quad.vertices[1].z = quad.vertices[2].z = (where.z + 1.0 - side) * Maze3D::cellSize;
 }

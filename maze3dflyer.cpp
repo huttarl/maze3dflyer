@@ -789,7 +789,7 @@ bool LoadGLTextures()                                    // Load images and conv
 
    // test:
    debugMsg("Loading from id %d, image %s: ", pictureTexture, "Data/Mona_Lisa.jpg");
-   if(!SOIL_load_OGL_texture("Data/Mona_Lisa.jpg", SOIL_LOAD_AUTO,
+   if(!SOIL_load_OGL_texture("Data/pictures/Mona_Lisa.jpg", SOIL_LOAD_AUTO,
 		pictureTexture,
                 SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS))
       debugMsg("Texture load status: false\n");
