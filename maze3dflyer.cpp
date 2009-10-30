@@ -793,15 +793,21 @@ bool LoadGLTextures()                                    // Load images and conv
    loadSkyTextures(); // don't complain if this fails; sky textures are a big download.
 
    // test:
-   debugMsg("Loading from id %d, file %s: ", imageTextures[0], "Data/Mona_Lisa.jpg");
-   imageTextures[0] = SOIL_load_OGL_texture("Data/pictures/Mona_Lisa.jpg", SOIL_LOAD_AUTO,
+   debugMsg("Loading from id %d, file %s: ", imageTextures[0], "Data/pictures/emmaus.jpg");
+   imageTextures[0] = SOIL_load_OGL_texture("Data/pictures/emmaus.jpg", SOIL_LOAD_AUTO,
 		imageTextures[0],
                 SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS);
-   images[0].init(imageTextures[0], 100, 100);
    if (!imageTextures[0])
       debugMsg("Texture load status: false\n");
-   else
+   else {
       debugMsg("Texture size: %d x %d\n", SOIL_image_width, SOIL_image_height);
+      images[0].init(imageTextures[0], SOIL_image_width, SOIL_image_height);
+   }
+
+   imageTextures[1] = SOIL_load_OGL_texture("Data/pictures/Mona_Lisa.jpg", SOIL_LOAD_AUTO,
+	       imageTextures[1],
+               SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS);
+   images[1].init(imageTextures[1], SOIL_image_width, SOIL_image_height);
 
 #ifdef PROFILING
    //if (!QueryPerformanceCounter((LARGE_INTEGER *)&perfAfter))

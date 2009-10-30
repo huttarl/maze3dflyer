@@ -556,7 +556,7 @@ void Maze3D::addPictures() {
 
       //##TODO: pick an image and direction at random
       if (validPlace)
-         addPictureAt(ccTmp, wall, 'x', &images[0]);
+         addPictureAt(ccTmp, wall, 'x', &images[rand() % 2]);
    }
 
    // debugging: are pictures[*].where really separate objects, as they should be? yes

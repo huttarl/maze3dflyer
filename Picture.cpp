@@ -53,7 +53,18 @@ void Picture::setupVertices(void) {
       qv[i].x -= ep;
    }
 
-   float top = 0.9f, bottom = 0.3f, side = 0.25f;
+   float top = 0.9f, bottom = 0.3f, side = 0.2f, minorAxis;
+
+   // adjust this based on aspect ratio of the image
+   if (image->width > image->height) {
+      minorAxis = 0.6f * image->height / image->width;
+      top = 0.6f + minorAxis * 0.5f;
+      bottom = 0.6f - minorAxis * 0.5f;
+   } else {
+      minorAxis = 0.6f * image->width / image->height;
+      side = 0.5f - minorAxis * 0.5f;
+   }
+
    // set bottom and top of picture
    qv[0].y = qv[1].y = (where.y + bottom) * Maze3D::cellSize;
    qv[2].y = qv[3].y = (where.y + top) * Maze3D::cellSize;
@@ -70,7 +81,9 @@ void Picture::setupVertices(void) {
       qv[i].x -= ep / 2.0;
    }
 
-   top = 0.925f, bottom = 0.275f, side = 0.225f;
+   top += 0.025f;
+   bottom -= 0.025f;
+   side -= 0.025f;
    // set bottom and top of picture
    qv[0].y = qv[1].y = (where.y + bottom) * Maze3D::cellSize;
    qv[2].y = qv[3].y = (where.y + top) * Maze3D::cellSize;
