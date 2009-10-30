@@ -7,14 +7,14 @@
 #include "CellCoord.h"
 #include "Wall.h"
 #include "Prize.h"
+#include "Image.h"
 #include "Picture.h"
 
 class Maze3D {
 public:
    const static int wMax = 30, hMax = 30, dMax = 30;	// This is necessary because C++ doesn't do fully dynamic
 										          // multidimensional arrays. I've been spoiled by Java.
-   const static int prizeMax = 30; // max # of prizes
-   const static int pictureMax = 30; // max # of pictures
+   const static int prizeMax = 30, pictureMax = 30; // max # of prizes, pictures
    int nPrizes, nPrizesLeft, nPictures;
 
    // The following probably belong in a Maze class.
@@ -54,6 +54,7 @@ public:
    Wall *exitWall, *entranceWall;
    Prize prizes[prizeMax];
    Picture pictures[pictureMax];
+
    bool hitLockedExit;
    bool isGenerating; // true while maze is being generated
 
@@ -90,7 +91,7 @@ public:
 
    void addPrizeAt(CellCoord &cc);
    void addPrizes(void);
-   void addPictureAt(CellCoord &cc, Wall *w, char dir);
+   void addPictureAt(CellCoord &cc, Wall *w, char dir, Image *image);
    void addPictures(void);
 
    void static inline glvc(int x, int y, int z) { glVertex3f(x * cellSize, y * cellSize, z * cellSize); }

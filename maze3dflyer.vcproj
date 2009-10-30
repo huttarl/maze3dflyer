@@ -183,6 +183,9 @@
 				RelativePath=".\HighScoreList.h">
 			</File>
 			<File
+				RelativePath=".\Image.h">
+			</File>
+			<File
 				RelativePath=".\Maze3D.h">
 			</File>
 			<File
