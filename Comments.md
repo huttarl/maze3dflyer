@@ -1,0 +1,8 @@
+Did you enjoy the game? Almost but not quite? Please let me know about it.
+
+# Comments #
+
+  * Daddy can we play the maze game? -Anna 2009/06/13
+
+  * This game is the awesomes! Except there's a bug where sometimes the prizes appear outside the maze. -FakeTestimonial2335  2009/06/14
+

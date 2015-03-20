@@ -1,0 +1,25 @@
+# Introduction #
+
+Please add your comments indicating which of the following (or other) features you would like to see prioritized.
+
+# Potential Feature list #
+
+## Major features ##
+  * Port to Linux
+  * Screensaver with autopilot
+  * Player ability to drop "bread crumbs"
+  * More action game-like features, e.g. enemies to overcome
+  * More puzzle-solving-oriented features, e.g. a 3rd-person view to aid in solving the maze
+  * More details in the maze, e.g. pictures on the walls
+  * Variety of skyboxes
+  * Dialog-based control of settings, such as maze dimensions and sparseness
+
+## Minor features ##
+  * Add scrolling for long best-score list
+  * When you exit, automatically turn around and see (receding) maze
+  * Discrete keyboard controls (rotate 90 degrees, move one cell)
+  * Better internal consistency checking, to prevent crashes (not that we've had any)
+
+## Other ideas? ##
+
+Please add your comments!
